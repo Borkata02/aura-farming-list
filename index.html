@@ -93,168 +93,165 @@
 
   </div>
 
-  <script>
-    // 1. КОНФИГУРИРАЙТЕ SUPABASE КЛЮЧОВЕТЕ ТУК!
-    const SUPABASE_URL = 'https://gemfaemxsdmyqawclmyv.supabase.co/rest/v1/';
-    const SUPABASE_ANON_KEY = 'sb_publishable_W4X4NAdj2b5S4fNdVJFStw_A7K1cO8-';
-    const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+<script>
+  const SUPABASE_URL = 'https://gemfaemxsdmyqawclmyv.supabase.co';
+  const SUPABASE_ANON_KEY = 'sb_publishable_W4X4NAdj2b5S4fNdVJFStw_A7K1cO8-';
+  const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-    let currentUser = null;
-    let currentUserProfile = null;
-    let isSignUp = false;
+  let currentUser = null;
+  let currentUserProfile = null;
+  let isSignUp = false;
 
-    // Инициализация при зареждане
-    window.addEventListener('DOMContentLoaded', async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session) {
-        currentUser = session.user;
+  // Инициализация при зареждане
+  window.addEventListener('DOMContentLoaded', async () => {
+    const { data: { session } } = await supabaseClient.auth.getSession();
+    if (session) {
+      currentUser = session.user;
+      await loadUserProfile();
+    }
+  });
+
+  // Изход
+  document.getElementById('logout-btn').addEventListener('click', async () => {
+    await supabaseClient.auth.signOut();
+    location.reload();
+  });
+
+  // Превключване Вход / Регистрация
+  document.getElementById('toggle-mode-btn').addEventListener('click', () => {
+    isSignUp = !isSignUp;
+    document.getElementById('username-container').classList.toggle('hidden', !isSignUp);
+    document.getElementById('submit-btn').textContent = isSignUp ? 'Изпрати заявка' : 'Вход';
+    document.getElementById('toggle-mode-btn').textContent = isSignUp ? 'Вече имате акаунт? Влезте' : 'Нямате акаунт? Поискайте достъп тук.';
+  });
+
+  // Форма Вход/Регистрация
+  document.getElementById('auth-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const email = document.getElementById('email').value;
+    const password = document.getElementById('password').value;
+    const username = document.getElementById('username').value;
+    const msgBox = document.getElementById('auth-message');
+
+    if (isSignUp) {
+      const { error } = await supabaseClient.auth.signUp({ email, password, options: { data: { username } } });
+      if (error) showMsg(msgBox, error.message, 'bg-red-500/20 text-red-400');
+      else showMsg(msgBox, 'Заявката е изпратена! Изчакайте админ да ви одобри.', 'bg-green-500/20 text-green-400');
+    } else {
+      const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
+      if (error) showMsg(msgBox, error.message, 'bg-red-500/20 text-red-400');
+      else {
+        currentUser = data.user;
         await loadUserProfile();
       }
+    }
+  });
+
+  // Зареждане на потребителския профил
+  async function loadUserProfile() {
+    const { data: profile, error } = await supabaseClient
+      .from('profiles')
+      .select('*')
+      .eq('id', currentUser.id)
+      .single();
+
+    if (error || !profile?.is_approved) {
+      await supabaseClient.auth.signOut();
+      showMsg(document.getElementById('auth-message'), 'Акаунтът ви не е одобрен от админ!', 'bg-yellow-500/20 text-yellow-400');
+      return;
+    }
+
+    currentUserProfile = profile;
+    document.getElementById('auth-section').classList.add('hidden');
+    document.getElementById('dashboard-section').classList.remove('hidden');
+    document.getElementById('user-info').classList.remove('hidden');
+    document.getElementById('user-name').textContent = profile.username;
+
+    if (profile.is_admin) {
+      document.getElementById('admin-panel').classList.remove('hidden');
+    }
+
+    await loadDashboardData();
+  }
+
+  // Зареждане на данни (Класация, Потребители, Хронология)
+  async function loadDashboardData() {
+    // 1. Взимане на профили за класацията
+    const { data: profiles } = await supabaseClient
+      .from('profiles')
+      .select('*')
+      .order('aura_points', { ascending: false });
+
+    const leaderboardBody = document.getElementById('leaderboard-body');
+    const targetSelect = document.getElementById('target-user');
+    leaderboardBody.innerHTML = '';
+    targetSelect.innerHTML = '<option value="">Изберете колега...</option>';
+
+    profiles?.forEach((p, index) => {
+      const row = `
+        <tr class="border-b border-slate-700/50 hover:bg-slate-700/30">
+          <td class="p-3 font-bold ${index === 0 ? 'text-amber-400' : 'text-slate-400'}">#${index + 1}</td>
+          <td class="p-3 font-medium">${p.username} ${p.is_admin ? '🛡️' : ''}</td>
+          <td class="p-3 text-right font-black ${p.aura_points >= 0 ? 'text-green-400' : 'text-red-400'}">${p.aura_points}</td>
+        </tr>`;
+      leaderboardBody.innerHTML += row;
+
+      targetSelect.innerHTML += `<option value="${p.id}">${p.username}</option>`;
     });
 
-    // Изход
-    document.getElementById('logout-btn').addEventListener('click', async () => {
-      await supabase.auth.signOut();
-      location.reload();
+    // 2. Взимане на историята (Logs)
+    const { data: logs } = await supabaseClient
+      .from('aura_logs')
+      .select('*, profiles!aura_logs_user_id_fkey(username)')
+      .order('created_at', { ascending: false })
+      .limit(10);
+
+    const logsContainer = document.getElementById('logs-container');
+    logsContainer.innerHTML = '';
+
+    logs?.forEach(log => {
+      const isPositive = log.points >= 0;
+      const item = `
+        <div class="p-3 bg-slate-900/60 rounded border border-slate-700/50 flex justify-between items-center">
+          <div>
+            <span class="font-bold text-indigo-300">${log.profiles?.username}</span>
+            <span class="text-slate-400"> - ${log.reason}</span>
+          </div>
+          <span class="font-bold ${isPositive ? 'text-green-400' : 'text-red-400'}">
+            ${isPositive ? '+' : ''}${log.points}
+          </span>
+        </div>`;
+      logsContainer.innerHTML += item;
+    });
+  }
+
+  // Обработка на форма за добавяне на аура (Админ)
+  document.getElementById('aura-form')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const userId = document.getElementById('target-user').value;
+    const points = parseInt(document.getElementById('aura-points').value);
+    const reason = document.getElementById('aura-reason').value;
+
+    const { error } = await supabaseClient.from('aura_logs').insert({
+      user_id: userId,
+      admin_id: currentUser.id,
+      points: points,
+      reason: reason
     });
 
-    // Превключване Вход / Регистрация
-    document.getElementById('toggle-mode-btn').addEventListener('click', () => {
-      isSignUp = !isSignUp;
-      document.getElementById('username-container').classList.toggle('hidden', !isSignUp);
-      document.getElementById('submit-btn').textContent = isSignUp ? 'Изпрати заявка' : 'Вход';
-      document.getElementById('toggle-mode-btn').textContent = isSignUp ? 'Вече имате акаунт? Влезте' : 'Нямате акаунт? Поискайте достъп тук.';
-    });
-
-    // Форма Вход/Регистрация
-    document.getElementById('auth-form').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const email = document.getElementById('email').value;
-      const password = document.getElementById('password').value;
-      const username = document.getElementById('username').value;
-      const msgBox = document.getElementById('auth-message');
-
-      if (isSignUp) {
-        const { error } = await supabase.auth.signUp({ email, password, options: { data: { username } } });
-        if (error) showMsg(msgBox, error.message, 'bg-red-500/20 text-red-400');
-        else showMsg(msgBox, 'Заявката е изпратена! Изчакайте админ да ви одобри.', 'bg-green-500/20 text-green-400');
-      } else {
-        const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-        if (error) showMsg(msgBox, error.message, 'bg-red-500/20 text-red-400');
-        else {
-          currentUser = data.user;
-          await loadUserProfile();
-        }
-      }
-    });
-
-    // Зареждане на потребителския профил
-    async function loadUserProfile() {
-      const { data: profile, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', currentUser.id)
-        .single();
-
-      if (error || !profile?.is_approved) {
-        await supabase.auth.signOut();
-        showMsg(document.getElementById('auth-message'), 'Акаунтът ви не е одобрен от админ!', 'bg-yellow-500/20 text-yellow-400');
-        return;
-      }
-
-      currentUserProfile = profile;
-      document.getElementById('auth-section').classList.add('hidden');
-      document.getElementById('dashboard-section').classList.remove('hidden');
-      document.getElementById('user-info').classList.remove('hidden');
-      document.getElementById('user-name').textContent = profile.username;
-
-      if (profile.is_admin) {
-        document.getElementById('admin-panel').classList.remove('hidden');
-      }
-
+    if (!error) {
+      document.getElementById('aura-form').reset();
       await loadDashboardData();
+    } else {
+      alert('Грешка при добавяне: ' + error.message);
     }
+  });
 
-    // Зареждане на данни (Класация, Потребители, Хронология)
-    async function loadDashboardData() {
-      // 1. Взимане на профили за класацията
-      const { data: profiles } = await supabase
-        .from('profiles')
-        .select('*')
-        .order('aura_points', { ascending: false });
-
-      const leaderboardBody = document.getElementById('leaderboard-body');
-      const targetSelect = document.getElementById('target-user');
-      leaderboardBody.innerHTML = '';
-      targetSelect.innerHTML = '<option value="">Изберете колега...</option>';
-
-      profiles?.forEach((p, index) => {
-        // Таблица
-        const row = `
-          <tr class="border-b border-slate-700/50 hover:bg-slate-700/30">
-            <td class="p-3 font-bold ${index === 0 ? 'text-amber-400' : 'text-slate-400'}">#${index + 1}</td>
-            <td class="p-3 font-medium">${p.username} ${p.is_admin ? '🛡️' : ''}</td>
-            <td class="p-3 text-right font-black ${p.aura_points >= 0 ? 'text-green-400' : 'text-red-400'}">${p.aura_points}</td>
-          </tr>`;
-        leaderboardBody.innerHTML += row;
-
-        // Опции за админ падащото меню
-        targetSelect.innerHTML += `<option value="${p.id}">${p.username}</option>`;
-      });
-
-      // 2. Взимане на историята (Logs)
-      const { data: logs } = await supabase
-        .from('aura_logs')
-        .select('*, profiles!aura_logs_user_id_fkey(username)')
-        .order('created_at', { ascending: false })
-        .limit(10);
-
-      const logsContainer = document.getElementById('logs-container');
-      logsContainer.innerHTML = '';
-
-      logs?.forEach(log => {
-        const isPositive = log.points >= 0;
-        const item = `
-          <div class="p-3 bg-slate-900/60 rounded border border-slate-700/50 flex justify-between items-center">
-            <div>
-              <span class="font-bold text-indigo-300">${log.profiles?.username}</span>
-              <span class="text-slate-400"> - ${log.reason}</span>
-            </div>
-            <span class="font-bold ${isPositive ? 'text-green-400' : 'text-red-400'}">
-              ${isPositive ? '+' : ''}${log.points}
-            </span>
-          </div>`;
-        logsContainer.innerHTML += item;
-      });
-    }
-
-    // Обработка на форма за добавяне на аура (Админ)
-    document.getElementById('aura-form')?.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const userId = document.getElementById('target-user').value;
-      const points = parseInt(document.getElementById('aura-points').value);
-      const reason = document.getElementById('aura-reason').value;
-
-      const { error } = await supabase.from('aura_logs').insert({
-        user_id: userId,
-        admin_id: currentUser.id,
-        points: points,
-        reason: reason
-      });
-
-      if (!error) {
-        document.getElementById('aura-form').reset();
-        await loadDashboardData();
-      } else {
-        alert('Грешка при добавяне: ' + error.message);
-      }
-    });
-
-    function showMsg(el, text, classes) {
-      el.className = `p-3 rounded mb-4 text-sm font-medium ${classes}`;
-      el.textContent = text;
-      el.classList.remove('hidden');
-    }
-  </script>
+  function showMsg(el, text, classes) {
+    el.className = `p-3 rounded mb-4 text-sm font-medium ${classes}`;
+    el.textContent = text;
+    el.classList.remove('hidden');
+  }
+</script>
 </body>
 </html>

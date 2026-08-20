@@ -268,19 +268,13 @@
   }
 
   // --- REALTIME АБОНАМЕНТ ---
-  supabaseClient
-    .channel('public-changes')
-    .on(
-      'postgres_changes',
-      { event: '*', schema: 'public', table: 'profiles' },
-      () => loadDashboardData()
-    )
-    .on(
-      'postgres_changes',
-      { event: '*', schema: 'public', table: 'aura_logs' },
-      () => loadDashboardData()
-    )
-    .subscribe();
+supabaseClient
+  .channel('public-changes')
+  .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' },
+    (payload) => { console.log('profiles change:', payload); loadDashboardData(); })
+  .on('postgres_changes', { event: '*', schema: 'public', table: 'aura_logs' },
+    (payload) => { console.log('aura_logs change:', payload); loadDashboardData(); })
+  .subscribe((status) => console.log('subscribe status:', status));
 </script>
 </body>
 </html>

@@ -147,40 +147,35 @@
     }
   });
 
-  // Зареждане на потребителския профил
+  // Зареждане на профил
   async function loadUserProfile() {
-  const { data: profile, error } = await supabaseClient
-    .from('profiles')
-    .select('*')
-    .eq('id', currentUser.id)
-    .maybeSingle(); // Заменяме .single() с .maybeSingle()
+    const { data: profile, error } = await supabaseClient
+      .from('profiles')
+      .select('*')
+      .eq('id', currentUser.id)
+      .maybeSingle();
 
-  if (error) {
-    console.error("Грешка при зареждане на профил:", error);
+    if (error || !profile || !profile.is_approved) {
+      await supabaseClient.auth.signOut();
+      showMsg(document.getElementById('auth-message'), 'Акаунтът ви не е одобрен от админ!', 'bg-yellow-500/20 text-yellow-400');
+      return;
+    }
+
+    currentUserProfile = profile;
+    document.getElementById('auth-section').classList.add('hidden');
+    document.getElementById('dashboard-section').classList.remove('hidden');
+    document.getElementById('user-info').classList.remove('hidden');
+    document.getElementById('user-name').textContent = profile.username;
+
+    if (profile.is_admin) {
+      document.getElementById('admin-panel').classList.remove('hidden');
+    }
+
+    await loadDashboardData();
   }
 
-  if (error || !profile || !profile.is_approved) {
-    await supabaseClient.auth.signOut();
-    showMsg(document.getElementById('auth-message'), 'Акаунтът ви не е одобрен от админ!', 'bg-yellow-500/20 text-yellow-400');
-    return;
-  }
-
-  currentUserProfile = profile;
-  document.getElementById('auth-section').classList.add('hidden');
-  document.getElementById('dashboard-section').classList.remove('hidden');
-  document.getElementById('user-info').classList.remove('hidden');
-  document.getElementById('user-name').textContent = profile.username;
-
-  if (profile.is_admin) {
-    document.getElementById('admin-panel').classList.remove('hidden');
-  }
-
-  await loadDashboardData();
-}
-
-  // Зареждане на данни (Класация, Потребители, Хронология)
+  // Зареждане на данни (Класация и Хронология)
   async function loadDashboardData() {
-    // 1. Взимане на профили за класацията
     const { data: profiles } = await supabaseClient
       .from('profiles')
       .select('*')
@@ -191,19 +186,23 @@
     leaderboardBody.innerHTML = '';
     targetSelect.innerHTML = '<option value="">Изберете колега...</option>';
 
-    profiles?.forEach((p, index) => {
-      const row = `
-        <tr class="border-b border-slate-700/50 hover:bg-slate-700/30">
-          <td class="p-3 font-bold ${index === 0 ? 'text-amber-400' : 'text-slate-400'}">#${index + 1}</td>
-          <td class="p-3 font-medium">${p.username} ${p.is_admin ? '🛡️' : ''}</td>
-          <td class="p-3 text-right font-black ${p.aura_points >= 0 ? 'text-green-400' : 'text-red-400'}">${p.aura_points}</td>
-        </tr>`;
-      leaderboardBody.innerHTML += row;
+profiles?.forEach((p, index) => {
+  const points = Number(p.aura_points) || 0;
+  const isPositive = points >= 0;
 
-      targetSelect.innerHTML += `<option value="${p.id}">${p.username}</option>`;
-    });
+  const row = `
+    <tr class="border-b border-slate-700/50 hover:bg-slate-700/30">
+      <td class="p-3 font-bold ${index === 0 ? 'text-amber-400' : 'text-slate-400'}">#${index + 1}</td>
+      <td class="p-3 font-medium">${p.username} ${p.is_admin ? '🛡️' : ''}</td>
+      <td class="p-3 text-right font-black ${isPositive ? 'text-green-400' : 'text-red-400'}">
+        ${points}
+      </td>
+    </tr>`;
+  leaderboardBody.innerHTML += row;
 
-    // 2. Взимане на историята (Logs)
+  targetSelect.innerHTML += `<option value="${p.id}">${p.username}</option>`;
+});
+
     const { data: logs } = await supabaseClient
       .from('aura_logs')
       .select('*, profiles!aura_logs_user_id_fkey(username)')
@@ -229,7 +228,7 @@
     });
   }
 
-  // Обработка на форма за добавяне на аура (Админ)
+  // Админ форма
   document.getElementById('aura-form')?.addEventListener('submit', async (e) => {
     e.preventDefault();
     const userId = document.getElementById('target-user').value;
@@ -245,7 +244,6 @@
 
     if (!error) {
       document.getElementById('aura-form').reset();
-      await loadDashboardData();
     } else {
       alert('Грешка при добавяне: ' + error.message);
     }
@@ -256,6 +254,21 @@
     el.textContent = text;
     el.classList.remove('hidden');
   }
+
+  // --- REALTIME АБОНАМЕНТ (АВТОМАТИЧНО ОБНОВЯВАНЕ) ---
+  supabaseClient
+    .channel('public-changes')
+    .on(
+      'postgres_changes',
+      { event: '*', schema: 'public', table: 'profiles' },
+      () => loadDashboardData()
+    )
+    .on(
+      'postgres_changes',
+      { event: '*', schema: 'public', table: 'aura_logs' },
+      () => loadDashboardData()
+    )
+    .subscribe();
 </script>
 </body>
 </html>

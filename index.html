@@ -3,127 +3,257 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Aura Farming Leaderboard</title>
-  <!-- Tailwind CSS за бърз и стилен дизайн -->
+  <title>Aura Farming List</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <!-- Supabase JS Library -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
-<body class="bg-slate-900 text-white min-h-screen flex items-center justify-center p-4">
+<body class="bg-slate-900 text-slate-100 min-h-screen p-4 md:p-8">
 
-  <div class="max-w-md w-full bg-slate-800 rounded-xl p-6 shadow-2xl border border-slate-700">
-    <h1 class="text-3xl font-extrabold text-center mb-2 text-indigo-400">✨ Aura Tracker</h1>
-    <p class="text-slate-400 text-center mb-6 text-sm">Влезте или поискайте достъп</p>
-
-    <!-- Съобщение за статус (грешка/успех) -->
-    <div id="message" class="hidden p-3 rounded mb-4 text-sm font-medium"></div>
-
-    <!-- Форма за Вход / Регистрация -->
-    <form id="auth-form" class="space-y-4">
-      <div>
-        <label class="block text-xs uppercase font-bold text-slate-400 mb-1">Имейл</label>
-        <input type="email" id="email" required class="w-full p-2.5 bg-slate-900 border border-slate-700 rounded focus:outline-none focus:border-indigo-500">
+  <div class="max-w-4xl mx-auto space-y-6">
+    
+    <!-- Header -->
+    <header class="flex justify-between items-center bg-slate-800 p-4 rounded-xl border border-slate-700 shadow-lg">
+      <h1 class="text-2xl font-black text-indigo-400">✨ Aura Leaderboard</h1>
+      <div id="user-info" class="hidden flex items-center gap-3">
+        <span id="user-name" class="font-semibold text-slate-300"></span>
+        <button id="logout-btn" class="text-xs bg-slate-700 hover:bg-slate-600 px-3 py-1.5 rounded transition">Изход</button>
       </div>
+    </header>
 
-      <div id="username-container" class="hidden">
-        <label class="block text-xs uppercase font-bold text-slate-400 mb-1">Потребителско име (Име)</label>
-        <input type="text" id="username" class="w-full p-2.5 bg-slate-900 border border-slate-700 rounded focus:outline-none focus:border-indigo-500">
-      </div>
+    <!-- СЕКЦИЯ: Вход / Регистрация -->
+    <div id="auth-section" class="max-w-md mx-auto bg-slate-800 rounded-xl p-6 border border-slate-700 shadow-2xl">
+      <h2 class="text-xl font-bold text-center mb-4 text-indigo-400">Вход в системата</h2>
+      <div id="auth-message" class="hidden p-3 rounded mb-4 text-sm font-medium"></div>
 
-      <div>
-        <label class="block text-xs uppercase font-bold text-slate-400 mb-1">Парола</label>
-        <input type="password" id="password" required class="w-full p-2.5 bg-slate-900 border border-slate-700 rounded focus:outline-none focus:border-indigo-500">
-      </div>
+      <form id="auth-form" class="space-y-4">
+        <div>
+          <label class="block text-xs uppercase font-bold text-slate-400 mb-1">Имейл</label>
+          <input type="email" id="email" required class="w-full p-2.5 bg-slate-900 border border-slate-700 rounded text-white focus:outline-none focus:border-indigo-500">
+        </div>
+        <div id="username-container" class="hidden">
+          <label class="block text-xs uppercase font-bold text-slate-400 mb-1">Вашето Име</label>
+          <input type="text" id="username" class="w-full p-2.5 bg-slate-900 border border-slate-700 rounded text-white focus:outline-none focus:border-indigo-500">
+        </div>
+        <div>
+          <label class="block text-xs uppercase font-bold text-slate-400 mb-1">Парола</label>
+          <input type="password" id="password" required class="w-full p-2.5 bg-slate-900 border border-slate-700 rounded text-white focus:outline-none focus:border-indigo-500">
+        </div>
+        <button type="submit" id="submit-btn" class="w-full bg-indigo-600 hover:bg-indigo-500 font-bold py-2.5 rounded transition">Вход</button>
+      </form>
 
-      <button type="submit" id="submit-btn" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-2.5 rounded transition duration-200">
-        Вход
-      </button>
-    </form>
-
-    <div class="mt-4 text-center">
-      <button id="toggle-mode-btn" class="text-xs text-indigo-400 hover:underline">
+      <button id="toggle-mode-btn" class="w-full text-center mt-4 text-xs text-indigo-400 hover:underline">
         Нямате акаунт? Поискайте достъп тук.
       </button>
     </div>
+
+    <!-- СЕКЦИЯ: Dashboard (Вижда се само след вход) -->
+    <div id="dashboard-section" class="hidden space-y-6">
+      
+      <!-- АДМИН ПАНЕЛ (Вижда се само от админи) -->
+      <div id="admin-panel" class="hidden bg-slate-800/80 border border-amber-500/30 p-5 rounded-xl shadow-lg">
+        <h3 class="text-lg font-bold text-amber-400 mb-3 flex items-center gap-2">🛡️ Админ Панел (Промяна на Аура)</h3>
+        <form id="aura-form" class="grid grid-cols-1 md:grid-cols-4 gap-3">
+          <select id="target-user" required class="bg-slate-900 border border-slate-700 p-2.5 rounded text-sm focus:outline-none">
+            <option value="">Изберете колега...</option>
+          </select>
+          <input type="number" id="aura-points" placeholder="Точки (напр. 500 или -200)" required class="bg-slate-900 border border-slate-700 p-2.5 rounded text-sm focus:outline-none">
+          <input type="text" id="aura-reason" placeholder="Причина (напр. 'Донесе понички')" required class="bg-slate-900 border border-slate-700 p-2.5 rounded text-sm focus:outline-none">
+          <button type="submit" class="bg-amber-600 hover:bg-amber-500 font-bold p-2.5 rounded text-sm transition">Приложи</button>
+        </form>
+      </div>
+
+      <!-- КЛАСАЦИЯ -->
+      <div class="bg-slate-800 rounded-xl p-5 border border-slate-700 shadow-lg">
+        <h3 class="text-lg font-bold text-slate-200 mb-4">🏆 Класация за Месеца</h3>
+        <div class="overflow-x-auto">
+          <table class="w-full text-left border-collapse">
+            <thead>
+              <tr class="border-b border-slate-700 text-xs text-slate-400 uppercase">
+                <th class="p-3">#</th>
+                <th class="p-3">Колега</th>
+                <th class="p-3 text-right">Аура</th>
+              </tr>
+            </thead>
+            <tbody id="leaderboard-body">
+              <!-- Динамични данни -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ХРОНОЛОГИЯ (FEED) -->
+      <div class="bg-slate-800 rounded-xl p-5 border border-slate-700 shadow-lg">
+        <h3 class="text-lg font-bold text-slate-200 mb-4">📜 Последна активност</h3>
+        <div id="logs-container" class="space-y-3 text-sm">
+          <!-- Динамични данни -->
+        </div>
+      </div>
+
+    </div>
+
   </div>
 
   <script>
-    // 1. КОНФИГУРАЦИЯ НА SUPABASE (Заменете с вашите ключове!)
+    // 1. КОНФИГУРИРАЙТЕ SUPABASE КЛЮЧОВЕТЕ ТУК!
     const SUPABASE_URL = 'ВАШИЯТ_SUPABASE_URL_ТУК';
     const SUPABASE_ANON_KEY = 'ВАШИЯТ_SUPABASE_ANON_KEY_ТУК';
-    
     const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-    // 2. Логика на формата
+    let currentUser = null;
+    let currentUserProfile = null;
     let isSignUp = false;
-    const form = document.getElementById('auth-form');
-    const toggleBtn = document.getElementById('toggle-mode-btn');
-    const usernameContainer = document.getElementById('username-container');
-    const submitBtn = document.getElementById('submit-btn');
-    const messageBox = document.getElementById('message');
 
-    // Превключване между "Вход" и "Заявка за достъп"
-    toggleBtn.addEventListener('click', () => {
-      isSignUp = !isSignUp;
-      usernameContainer.classList.toggle('hidden', !isSignUp);
-      submitBtn.textContent = isSignUp ? 'Изпрати заявка' : 'Вход';
-      toggleBtn.textContent = isSignUp ? 'Вече имате акаунт? Влезте' : 'Нямате акаунт? Поискайте достъп тук.';
-      messageBox.classList.add('hidden');
+    // Инициализация при зареждане
+    window.addEventListener('DOMContentLoaded', async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        currentUser = session.user;
+        await loadUserProfile();
+      }
     });
 
-    // Обработка на изпращането
-    form.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      messageBox.classList.add('hidden');
+    // Изход
+    document.getElementById('logout-btn').addEventListener('click', async () => {
+      await supabase.auth.signOut();
+      location.reload();
+    });
 
+    // Превключване Вход / Регистрация
+    document.getElementById('toggle-mode-btn').addEventListener('click', () => {
+      isSignUp = !isSignUp;
+      document.getElementById('username-container').classList.toggle('hidden', !isSignUp);
+      document.getElementById('submit-btn').textContent = isSignUp ? 'Изпрати заявка' : 'Вход';
+      document.getElementById('toggle-mode-btn').textContent = isSignUp ? 'Вече имате акаунт? Влезте' : 'Нямате акаунт? Поискайте достъп тук.';
+    });
+
+    // Форма Вход/Регистрация
+    document.getElementById('auth-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
       const email = document.getElementById('email').value;
       const password = document.getElementById('password').value;
       const username = document.getElementById('username').value;
+      const msgBox = document.getElementById('auth-message');
 
       if (isSignUp) {
-        // РЕГИСТРАЦИЯ
-        const { data, error } = await supabase.auth.signUp({
-          email,
-          password,
-          options: { data: { username } }
-        });
-
-        if (error) {
-          showMessage(error.message, 'bg-red-500/20 text-red-400 border border-red-500');
-        } else {
-          showMessage('Заявката е изпратена! Моля, изчакайте админ да одобри акаунта ви.', 'bg-green-500/20 text-green-400 border border-green-500');
-          form.reset();
-        }
+        const { error } = await supabase.auth.signUp({ email, password, options: { data: { username } } });
+        if (error) showMsg(msgBox, error.message, 'bg-red-500/20 text-red-400');
+        else showMsg(msgBox, 'Заявката е изпратена! Изчакайте админ да ви одобри.', 'bg-green-500/20 text-green-400');
       } else {
-        // ВХОД
         const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-
-        if (error) {
-          showMessage(error.message, 'bg-red-500/20 text-red-400 border border-red-500');
-          return;
-        }
-
-        // Проверка дали потребителят е одобрен
-        const { data: profile, error: profileError } = await supabase
-          .from('profiles')
-          .select('is_approved')
-          .eq('id', data.user.id)
-          .single();
-
-        if (profileError || !profile?.is_approved) {
-          await supabase.auth.signOut(); // Излизаме автоматично
-          showMessage('Акаунтът ви все още очаква одобрение от админ!', 'bg-yellow-500/20 text-yellow-400 border border-yellow-500');
-        } else {
-          showMessage('Успешен вход! Пренасочване...', 'bg-green-500/20 text-green-400 border border-green-500');
-          // Тук по-нататък ще пренасочим към dashboard-а
+        if (error) showMsg(msgBox, error.message, 'bg-red-500/20 text-red-400');
+        else {
+          currentUser = data.user;
+          await loadUserProfile();
         }
       }
     });
 
-    function showMessage(msg, classes) {
-      messageBox.className = `p-3 rounded mb-4 text-sm font-medium ${classes}`;
-      messageBox.textContent = msg;
-      messageBox.classList.remove('hidden');
+    // Зареждане на потребителския профил
+    async function loadUserProfile() {
+      const { data: profile, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', currentUser.id)
+        .single();
+
+      if (error || !profile?.is_approved) {
+        await supabase.auth.signOut();
+        showMsg(document.getElementById('auth-message'), 'Акаунтът ви не е одобрен от админ!', 'bg-yellow-500/20 text-yellow-400');
+        return;
+      }
+
+      currentUserProfile = profile;
+      document.getElementById('auth-section').classList.add('hidden');
+      document.getElementById('dashboard-section').classList.remove('hidden');
+      document.getElementById('user-info').classList.remove('hidden');
+      document.getElementById('user-name').textContent = profile.username;
+
+      if (profile.is_admin) {
+        document.getElementById('admin-panel').classList.remove('hidden');
+      }
+
+      await loadDashboardData();
+    }
+
+    // Зареждане на данни (Класация, Потребители, Хронология)
+    async function loadDashboardData() {
+      // 1. Взимане на профили за класацията
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('*')
+        .order('aura_points', { ascending: false });
+
+      const leaderboardBody = document.getElementById('leaderboard-body');
+      const targetSelect = document.getElementById('target-user');
+      leaderboardBody.innerHTML = '';
+      targetSelect.innerHTML = '<option value="">Изберете колега...</option>';
+
+      profiles?.forEach((p, index) => {
+        // Таблица
+        const row = `
+          <tr class="border-b border-slate-700/50 hover:bg-slate-700/30">
+            <td class="p-3 font-bold ${index === 0 ? 'text-amber-400' : 'text-slate-400'}">#${index + 1}</td>
+            <td class="p-3 font-medium">${p.username} ${p.is_admin ? '🛡️' : ''}</td>
+            <td class="p-3 text-right font-black ${p.aura_points >= 0 ? 'text-green-400' : 'text-red-400'}">${p.aura_points}</td>
+          </tr>`;
+        leaderboardBody.innerHTML += row;
+
+        // Опции за админ падащото меню
+        targetSelect.innerHTML += `<option value="${p.id}">${p.username}</option>`;
+      });
+
+      // 2. Взимане на историята (Logs)
+      const { data: logs } = await supabase
+        .from('aura_logs')
+        .select('*, profiles!aura_logs_user_id_fkey(username)')
+        .order('created_at', { ascending: false })
+        .limit(10);
+
+      const logsContainer = document.getElementById('logs-container');
+      logsContainer.innerHTML = '';
+
+      logs?.forEach(log => {
+        const isPositive = log.points >= 0;
+        const item = `
+          <div class="p-3 bg-slate-900/60 rounded border border-slate-700/50 flex justify-between items-center">
+            <div>
+              <span class="font-bold text-indigo-300">${log.profiles?.username}</span>
+              <span class="text-slate-400"> - ${log.reason}</span>
+            </div>
+            <span class="font-bold ${isPositive ? 'text-green-400' : 'text-red-400'}">
+              ${isPositive ? '+' : ''}${log.points}
+            </span>
+          </div>`;
+        logsContainer.innerHTML += item;
+      });
+    }
+
+    // Обработка на форма за добавяне на аура (Админ)
+    document.getElementById('aura-form')?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const userId = document.getElementById('target-user').value;
+      const points = parseInt(document.getElementById('aura-points').value);
+      const reason = document.getElementById('aura-reason').value;
+
+      const { error } = await supabase.from('aura_logs').insert({
+        user_id: userId,
+        admin_id: currentUser.id,
+        points: points,
+        reason: reason
+      });
+
+      if (!error) {
+        document.getElementById('aura-form').reset();
+        await loadDashboardData();
+      } else {
+        alert('Грешка при добавяне: ' + error.message);
+      }
+    });
+
+    function showMsg(el, text, classes) {
+      el.className = `p-3 rounded mb-4 text-sm font-medium ${classes}`;
+      el.textContent = text;
+      el.classList.remove('hidden');
     }
   </script>
 </body>

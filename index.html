@@ -46,18 +46,18 @@
       </button>
     </div>
 
-    <!-- СЕКЦИЯ: Dashboard (Вижда се само след вход) -->
+    <!-- СЕКЦИЯ: Dashboard -->
     <div id="dashboard-section" class="hidden space-y-6">
       
-      <!-- АДМИН ПАНЕЛ (Вижда се само от админи) -->
+      <!-- АДМИН ПАНЕЛ -->
       <div id="admin-panel" class="hidden bg-slate-800/80 border border-amber-500/30 p-5 rounded-xl shadow-lg">
         <h3 class="text-lg font-bold text-amber-400 mb-3 flex items-center gap-2">🛡️ Админ Панел (Промяна на Аура)</h3>
         <form id="aura-form" class="grid grid-cols-1 md:grid-cols-4 gap-3">
-          <select id="target-user" required class="bg-slate-900 border border-slate-700 p-2.5 rounded text-sm focus:outline-none">
+          <select id="target-user" required class="bg-slate-900 border border-slate-700 p-2.5 rounded text-sm focus:outline-none text-white">
             <option value="">Изберете колега...</option>
           </select>
-          <input type="number" id="aura-points" placeholder="Точки (напр. 500 или -200)" required class="bg-slate-900 border border-slate-700 p-2.5 rounded text-sm focus:outline-none">
-          <input type="text" id="aura-reason" placeholder="Причина (напр. 'Донесе понички')" required class="bg-slate-900 border border-slate-700 p-2.5 rounded text-sm focus:outline-none">
+          <input type="number" id="aura-points" placeholder="Точки (напр. 500 или -200)" required class="bg-slate-900 border border-slate-700 p-2.5 rounded text-sm focus:outline-none text-white">
+          <input type="text" id="aura-reason" placeholder="Причина (напр. 'Донесе понички')" required class="bg-slate-900 border border-slate-700 p-2.5 rounded text-sm focus:outline-none text-white">
           <button type="submit" class="bg-amber-600 hover:bg-amber-500 font-bold p-2.5 rounded text-sm transition">Приложи</button>
         </form>
       </div>
@@ -176,38 +176,48 @@
 
   // Зареждане на данни (Класация и Хронология)
   async function loadDashboardData() {
-    const { data: profiles } = await supabaseClient
+    const { data: profiles, error: pErr } = await supabaseClient
       .from('profiles')
       .select('*')
       .order('aura_points', { ascending: false });
 
+    if (pErr) console.error("Грешка при профили:", pErr);
+
     const leaderboardBody = document.getElementById('leaderboard-body');
     const targetSelect = document.getElementById('target-user');
+    const currentSelectedUser = targetSelect.value;
+
     leaderboardBody.innerHTML = '';
     targetSelect.innerHTML = '<option value="">Изберете колега...</option>';
 
-profiles?.forEach((p, index) => {
-  const points = Number(p.aura_points) || 0;
-  const isPositive = points >= 0;
+    profiles?.forEach((p, index) => {
+      const points = Number(p.aura_points) || 0;
+      const isPositive = points >= 0;
 
-  const row = `
-    <tr class="border-b border-slate-700/50 hover:bg-slate-700/30">
-      <td class="p-3 font-bold ${index === 0 ? 'text-amber-400' : 'text-slate-400'}">#${index + 1}</td>
-      <td class="p-3 font-medium">${p.username} ${p.is_admin ? '🛡️' : ''}</td>
-      <td class="p-3 text-right font-black ${isPositive ? 'text-green-400' : 'text-red-400'}">
-        ${points}
-      </td>
-    </tr>`;
-  leaderboardBody.innerHTML += row;
+      const row = `
+        <tr class="border-b border-slate-700/50 hover:bg-slate-700/30">
+          <td class="p-3 font-bold ${index === 0 ? 'text-amber-400' : 'text-slate-400'}">#${index + 1}</td>
+          <td class="p-3 font-medium">${p.username} ${p.is_admin ? '🛡️' : ''}</td>
+          <td class="p-3 text-right font-black ${isPositive ? 'text-green-400' : 'text-red-400'}">
+            ${points}
+          </td>
+        </tr>`;
+      leaderboardBody.innerHTML += row;
 
-  targetSelect.innerHTML += `<option value="${p.id}">${p.username}</option>`;
-});
+      const option = document.createElement('option');
+      option.value = p.id;
+      option.textContent = p.username;
+      if (p.id === currentSelectedUser) option.selected = true;
+      targetSelect.appendChild(option);
+    });
 
-    const { data: logs } = await supabaseClient
+    const { data: logs, error: lErr } = await supabaseClient
       .from('aura_logs')
       .select('*, profiles!aura_logs_user_id_fkey(username)')
       .order('created_at', { ascending: false })
       .limit(10);
+
+    if (lErr) console.error("Грешка при логове:", lErr);
 
     const logsContainer = document.getElementById('logs-container');
     logsContainer.innerHTML = '';
@@ -217,7 +227,7 @@ profiles?.forEach((p, index) => {
       const item = `
         <div class="p-3 bg-slate-900/60 rounded border border-slate-700/50 flex justify-between items-center">
           <div>
-            <span class="font-bold text-indigo-300">${log.profiles?.username}</span>
+            <span class="font-bold text-indigo-300">${log.profiles?.username || 'Потребител'}</span>
             <span class="text-slate-400"> - ${log.reason}</span>
           </div>
           <span class="font-bold ${isPositive ? 'text-green-400' : 'text-red-400'}">
@@ -244,6 +254,8 @@ profiles?.forEach((p, index) => {
 
     if (!error) {
       document.getElementById('aura-form').reset();
+      // Ръчно незабавно презареждане
+      await loadDashboardData();
     } else {
       alert('Грешка при добавяне: ' + error.message);
     }
@@ -255,7 +267,7 @@ profiles?.forEach((p, index) => {
     el.classList.remove('hidden');
   }
 
-  // --- REALTIME АБОНАМЕНТ (АВТОМАТИЧНО ОБНОВЯВАНЕ) ---
+  // --- REALTIME АБОНАМЕНТ ---
   supabaseClient
     .channel('public-changes')
     .on(

@@ -149,30 +149,34 @@
 
   // Зареждане на потребителския профил
   async function loadUserProfile() {
-    const { data: profile, error } = await supabaseClient
-      .from('profiles')
-      .select('*')
-      .eq('id', currentUser.id)
-      .single();
+  const { data: profile, error } = await supabaseClient
+    .from('profiles')
+    .select('*')
+    .eq('id', currentUser.id)
+    .maybeSingle(); // Заменяме .single() с .maybeSingle()
 
-    if (error || !profile?.is_approved) {
-      await supabaseClient.auth.signOut();
-      showMsg(document.getElementById('auth-message'), 'Акаунтът ви не е одобрен от админ!', 'bg-yellow-500/20 text-yellow-400');
-      return;
-    }
-
-    currentUserProfile = profile;
-    document.getElementById('auth-section').classList.add('hidden');
-    document.getElementById('dashboard-section').classList.remove('hidden');
-    document.getElementById('user-info').classList.remove('hidden');
-    document.getElementById('user-name').textContent = profile.username;
-
-    if (profile.is_admin) {
-      document.getElementById('admin-panel').classList.remove('hidden');
-    }
-
-    await loadDashboardData();
+  if (error) {
+    console.error("Грешка при зареждане на профил:", error);
   }
+
+  if (error || !profile || !profile.is_approved) {
+    await supabaseClient.auth.signOut();
+    showMsg(document.getElementById('auth-message'), 'Акаунтът ви не е одобрен от админ!', 'bg-yellow-500/20 text-yellow-400');
+    return;
+  }
+
+  currentUserProfile = profile;
+  document.getElementById('auth-section').classList.add('hidden');
+  document.getElementById('dashboard-section').classList.remove('hidden');
+  document.getElementById('user-info').classList.remove('hidden');
+  document.getElementById('user-name').textContent = profile.username;
+
+  if (profile.is_admin) {
+    document.getElementById('admin-panel').classList.remove('hidden');
+  }
+
+  await loadDashboardData();
+}
 
   // Зареждане на данни (Класация, Потребители, Хронология)
   async function loadDashboardData() {

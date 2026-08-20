@@ -112,10 +112,14 @@
   });
 
   // Изход
-  document.getElementById('logout-btn').addEventListener('click', async () => {
-    await supabaseClient.auth.signOut();
-    location.reload();
-  });
+document.getElementById('logout-btn').addEventListener('click', async () => {
+  if (realtimeChannel) {
+    await supabaseClient.removeChannel(realtimeChannel);
+    realtimeChannel = null;
+  }
+  await supabaseClient.auth.signOut();
+  location.reload();
+});
 
   // Превключване Вход / Регистрация
   document.getElementById('toggle-mode-btn').addEventListener('click', () => {
@@ -148,31 +152,45 @@
   });
 
   // Зареждане на профил
-  async function loadUserProfile() {
-    const { data: profile, error } = await supabaseClient
-      .from('profiles')
-      .select('*')
-      .eq('id', currentUser.id)
-      .maybeSingle();
+async function loadUserProfile() {
+  const { data: profile, error } = await supabaseClient
+    .from('profiles')
+    .select('*')
+    .eq('id', currentUser.id)
+    .maybeSingle();
 
-    if (error || !profile || !profile.is_approved) {
-      await supabaseClient.auth.signOut();
-      showMsg(document.getElementById('auth-message'), 'Акаунтът ви не е одобрен от админ!', 'bg-yellow-500/20 text-yellow-400');
-      return;
-    }
-
-    currentUserProfile = profile;
-    document.getElementById('auth-section').classList.add('hidden');
-    document.getElementById('dashboard-section').classList.remove('hidden');
-    document.getElementById('user-info').classList.remove('hidden');
-    document.getElementById('user-name').textContent = profile.username;
-
-    if (profile.is_admin) {
-      document.getElementById('admin-panel').classList.remove('hidden');
-    }
-
-    await loadDashboardData();
+  if (error || !profile || !profile.is_approved) {
+    await supabaseClient.auth.signOut();
+    showMsg(document.getElementById('auth-message'), 'Акаунтът ви не е одобрен от админ!', 'bg-yellow-500/20 text-yellow-400');
+    return;
   }
+
+  currentUserProfile = profile;
+  document.getElementById('auth-section').classList.add('hidden');
+  document.getElementById('dashboard-section').classList.remove('hidden');
+  document.getElementById('user-info').classList.remove('hidden');
+  document.getElementById('user-name').textContent = profile.username;
+
+  if (profile.is_admin) {
+    document.getElementById('admin-panel').classList.remove('hidden');
+  }
+
+  await loadDashboardData();
+  subscribeToRealtime(); // <-- добавено тук
+}
+
+let realtimeChannel = null;
+
+function subscribeToRealtime() {
+  if (realtimeChannel) return; // не дублирай канала при повторен login
+  realtimeChannel = supabaseClient
+    .channel('public-changes')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' },
+      (payload) => { console.log('profiles change:', payload); loadDashboardData(); })
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'aura_logs' },
+      (payload) => { console.log('aura_logs change:', payload); loadDashboardData(); })
+    .subscribe((status) => console.log('subscribe status:', status));
+}
 
   // Зареждане на данни (Класация и Хронология)
   async function loadDashboardData() {
@@ -268,13 +286,7 @@
   }
 
   // --- REALTIME АБОНАМЕНТ ---
-supabaseClient
-  .channel('public-changes')
-  .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' },
-    (payload) => { console.log('profiles change:', payload); loadDashboardData(); })
-  .on('postgres_changes', { event: '*', schema: 'public', table: 'aura_logs' },
-    (payload) => { console.log('aura_logs change:', payload); loadDashboardData(); })
-  .subscribe((status) => console.log('subscribe status:', status));
+
 </script>
 </body>
 </html>

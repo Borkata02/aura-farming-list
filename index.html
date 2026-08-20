@@ -3,289 +3,1223 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Aura Farming List</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <title>Аура — признание за екипа</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.111.0" referrerpolicy="no-referrer"></script>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: oklch(1 0 0);
+      --surface: oklch(0.97 0 0);
+      --surface-strong: oklch(0.93 0 0);
+      --ink: oklch(0.20 0.018 5);
+      --muted: oklch(0.46 0.018 5);
+      --border: oklch(0.86 0.008 5);
+      --primary: oklch(0.43 0.15 5);
+      --primary-hover: oklch(0.37 0.14 5);
+      --primary-soft: oklch(0.96 0.025 5);
+      --focus: oklch(0.46 0.12 210);
+      --accent: oklch(0.88 0.07 210);
+      --accent-ink: oklch(0.30 0.08 210);
+      --success: oklch(0.40 0.12 150);
+      --success-soft: oklch(0.95 0.04 150);
+      --danger: oklch(0.44 0.17 25);
+      --danger-soft: oklch(0.96 0.035 25);
+      --warning: oklch(0.48 0.11 75);
+      --warning-soft: oklch(0.96 0.04 75);
+      --radius-sm: 8px;
+      --radius-md: 12px;
+      --radius-lg: 16px;
+      --space-1: 0.25rem;
+      --space-2: 0.5rem;
+      --space-3: 0.75rem;
+      --space-4: 1rem;
+      --space-5: 1.25rem;
+      --space-6: 1.5rem;
+      --space-8: 2rem;
+      --space-10: 2.5rem;
+      font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-width: 320px;
+      min-height: 100vh;
+      background: var(--bg);
+      color: var(--ink);
+      line-height: 1.5;
+    }
+
+    button, input, select { font: inherit; }
+    button { cursor: pointer; }
+    button:disabled, input:disabled, select:disabled { cursor: not-allowed; opacity: 0.58; }
+    .hidden { display: none !important; }
+
+    :where(button, input, select):focus-visible {
+      outline: 3px solid color-mix(in oklch, var(--focus) 55%, white);
+      outline-offset: 2px;
+    }
+
+    .app-header {
+      border-bottom: 1px solid var(--border);
+      background: var(--bg);
+    }
+
+    .app-header__inner,
+    .page-shell {
+      width: min(100% - 2rem, 70rem);
+      margin-inline: auto;
+    }
+
+    .app-header__inner {
+      min-height: 4.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--space-4);
+    }
+
+    .brand { min-width: 0; }
+    .brand__name { margin: 0; font-size: 1.25rem; line-height: 1.2; letter-spacing: -0.02em; }
+    .brand__tagline { margin: 0.15rem 0 0; color: var(--muted); font-size: 0.875rem; }
+
+    .user-menu { display: flex; align-items: center; justify-content: flex-end; gap: var(--space-3); min-width: 0; }
+    .user-menu__identity { min-width: 0; text-align: right; }
+    .user-menu__name { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 650; }
+    .connection-status { display: flex; align-items: center; justify-content: flex-end; gap: 0.35rem; color: var(--muted); font-size: 0.75rem; }
+    .connection-status::before { width: 0.45rem; height: 0.45rem; border-radius: 50%; background: var(--success); content: ""; }
+    .connection-status[data-state="pending"]::before { background: var(--warning); }
+    .connection-status[data-state="error"]::before { background: var(--danger); }
+
+    .page-shell { padding-block: var(--space-10) 4rem; }
+    .stack { display: flex; flex-direction: column; gap: var(--space-6); }
+
+    .auth-card {
+      width: min(100%, 29rem);
+      margin-inline: auto;
+      padding: var(--space-8);
+      border-radius: var(--radius-lg);
+      background: var(--bg);
+      box-shadow: 0 2px 8px oklch(0.20 0.018 5 / 0.10);
+    }
+
+    .auth-card__header { margin-bottom: var(--space-6); }
+    .auth-card h2 { margin: 0; font-size: 1.5rem; line-height: 1.25; letter-spacing: -0.02em; text-wrap: balance; }
+    .auth-card__description { margin: var(--space-2) 0 0; color: var(--muted); text-wrap: pretty; }
+
+    .form-stack { display: flex; flex-direction: column; gap: var(--space-4); }
+    .field { display: flex; flex-direction: column; gap: var(--space-2); min-width: 0; }
+    .field label { font-size: 0.875rem; font-weight: 650; }
+    .field__hint { margin: -0.2rem 0 0; color: var(--muted); font-size: 0.8125rem; }
+
+    .control {
+      width: 100%;
+      min-height: 2.75rem;
+      padding: 0.65rem 0.75rem;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      background: var(--bg);
+      color: var(--ink);
+      transition: border-color 180ms cubic-bezier(0.22, 1, 0.36, 1), background 180ms cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    .control:hover { border-color: color-mix(in oklch, var(--primary) 40%, var(--border)); }
+    .control::placeholder { color: var(--muted); opacity: 1; }
+    .control[aria-invalid="true"] { border-color: var(--danger); background: var(--danger-soft); }
+
+    .button {
+      min-height: 2.75rem;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: var(--space-2);
+      padding: 0.65rem 1rem;
+      border: 0;
+      border-radius: var(--radius-sm);
+      font-weight: 700;
+      line-height: 1.2;
+      transition: background 180ms cubic-bezier(0.22, 1, 0.36, 1), transform 180ms cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    .button:active:not(:disabled) { transform: translateY(1px); }
+    .button--primary { background: var(--primary); color: white; }
+    .button--primary:hover:not(:disabled) { background: var(--primary-hover); }
+    .button--secondary { border: 1px solid var(--border); background: var(--bg); color: var(--ink); }
+    .button--secondary:hover:not(:disabled) { background: var(--surface); }
+    .button--text { min-height: 2.75rem; padding-inline: 0.5rem; background: transparent; color: var(--primary); }
+    .button--text:hover:not(:disabled) { background: var(--primary-soft); }
+    .button--full { width: 100%; }
+    .button[aria-busy="true"]::before { width: 0.9rem; height: 0.9rem; border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%; content: ""; animation: spin 700ms linear infinite; }
+
+    .auth-actions { margin-top: var(--space-3); display: flex; flex-direction: column; align-items: stretch; }
+
+    .message {
+      margin-bottom: var(--space-4);
+      padding: var(--space-3) var(--space-4);
+      border-radius: var(--radius-sm);
+      font-size: 0.875rem;
+    }
+
+    .message--info { background: var(--accent); color: var(--accent-ink); }
+    .message--success { background: var(--success-soft); color: var(--success); }
+    .message--warning { background: var(--warning-soft); color: var(--warning); }
+    .message--error { background: var(--danger-soft); color: var(--danger); }
+    .message__actions { margin-top: var(--space-3); display: flex; flex-wrap: wrap; gap: var(--space-2); }
+
+    .dashboard-intro { display: flex; justify-content: space-between; align-items: end; gap: var(--space-6); }
+    .dashboard-intro h2 { margin: 0; font-size: 1.75rem; line-height: 1.2; letter-spacing: -0.025em; text-wrap: balance; }
+    .dashboard-intro p { max-width: 68ch; margin: var(--space-2) 0 0; color: var(--muted); }
+    .month-chip { flex: none; padding: 0.4rem 0.7rem; border-radius: 999px; background: var(--primary-soft); color: var(--primary); font-size: 0.8125rem; font-weight: 750; }
+
+    .policy-note { padding: var(--space-5); border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--surface); }
+    .policy-note h3 { margin: 0 0 var(--space-2); font-size: 1rem; }
+    .policy-note p { max-width: 75ch; margin: 0; color: var(--muted); }
+
+    .panel { border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--bg); }
+    .panel__header { display: flex; align-items: end; justify-content: space-between; gap: var(--space-4); padding: var(--space-5); border-bottom: 1px solid var(--border); }
+    .panel__header h3 { margin: 0; font-size: 1.125rem; }
+    .panel__header p { margin: var(--space-1) 0 0; color: var(--muted); font-size: 0.875rem; }
+    .panel__body { padding: var(--space-5); }
+
+    .admin-panel { border-color: color-mix(in oklch, var(--primary) 35%, var(--border)); }
+    .admin-form { display: grid; grid-template-columns: minmax(11rem, 0.9fr) minmax(11rem, 1fr) minmax(8rem, 0.65fr) minmax(14rem, 1.4fr) auto; align-items: end; gap: var(--space-3); }
+    .admin-form__action { min-width: 8rem; }
+    .score-preview { grid-column: 2 / -1; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-2); padding: var(--space-3); border-radius: var(--radius-sm); background: var(--surface); }
+    .score-preview__item { min-width: 0; }
+    .score-preview__label { display: block; color: var(--muted); font-size: 0.75rem; }
+    .score-preview__value { display: block; margin-top: 0.1rem; font-size: 1rem; font-weight: 750; font-variant-numeric: tabular-nums; }
+
+    .confirmation { margin-top: var(--space-4); padding: var(--space-4); border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); }
+    .confirmation h4 { margin: 0; font-size: 1rem; }
+    .confirmation p { margin: var(--space-2) 0 0; color: var(--muted); }
+    .confirmation--warning { border-color: color-mix(in oklch, var(--warning) 45%, var(--border)); background: var(--warning-soft); }
+    .confirmation__actions { margin-top: var(--space-4); display: flex; flex-wrap: wrap; gap: var(--space-2); }
+
+    .dashboard-grid { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(18rem, 0.85fr); gap: var(--space-6); align-items: start; }
+    .toolbar { display: flex; align-items: end; gap: var(--space-3); }
+    .toolbar .field { width: min(15rem, 100%); }
+    .toolbar label { font-size: 0.75rem; }
+
+    .table-scroll { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { padding: 0.8rem 0.75rem; text-align: left; }
+    th { color: var(--muted); font-size: 0.75rem; font-weight: 750; }
+    tbody tr { border-top: 1px solid var(--border); }
+    tbody tr:first-child { border-top: 0; }
+    tbody tr:hover { background: var(--surface); }
+    tbody tr[data-current-user="true"] { background: var(--primary-soft); }
+    .rank { width: 3rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+    .number { text-align: right; font-variant-numeric: tabular-nums; }
+    .score { font-weight: 800; }
+    .score--positive { color: var(--success); }
+    .score--negative { color: var(--danger); }
+    .person { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); font-weight: 650; }
+    .badge { display: inline-flex; align-items: center; min-height: 1.5rem; padding: 0.15rem 0.45rem; border-radius: 999px; background: var(--accent); color: var(--accent-ink); font-size: 0.7rem; font-weight: 750; }
+
+    .activity-list { margin: 0; padding: 0; list-style: none; }
+    .activity-item { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--space-3); padding: var(--space-4) 0; border-bottom: 1px solid var(--border); }
+    .activity-item:first-child { padding-top: 0; }
+    .activity-item:last-child { padding-bottom: 0; border-bottom: 0; }
+    .activity-item__person { font-weight: 750; }
+    .activity-item__reason { margin-top: var(--space-1); color: var(--muted); overflow-wrap: anywhere; }
+    .activity-item__meta { margin-top: var(--space-2); color: var(--muted); font-size: 0.75rem; }
+
+    .empty-state { padding: var(--space-8) var(--space-4); text-align: center; color: var(--muted); }
+    .skeleton { height: 0.9rem; border-radius: 999px; background: var(--surface-strong); animation: pulse 1.4s ease-in-out infinite; }
+    .skeleton + .skeleton { margin-top: var(--space-3); }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+    @keyframes pulse { 50% { opacity: 0.45; } }
+
+    @media (max-width: 900px) {
+      .admin-form { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .admin-form__action { width: 100%; }
+      .score-preview { grid-column: 1 / -1; }
+      .dashboard-grid { grid-template-columns: 1fr; }
+    }
+
+    @media (max-width: 640px) {
+      .app-header__inner, .page-shell { width: min(100% - 1.25rem, 70rem); }
+      .app-header__inner { min-height: auto; padding-block: var(--space-3); align-items: flex-start; flex-wrap: wrap; }
+      .brand__tagline { display: none; }
+      .user-menu { width: 100%; justify-content: space-between; }
+      .user-menu__identity { text-align: left; }
+      .connection-status { justify-content: flex-start; }
+      .connection-status, .field__hint, .toolbar label, .activity-item__meta, th, .badge { font-size: 0.875rem; }
+      .page-shell { padding-block: var(--space-6) var(--space-10); }
+      .auth-card { padding: var(--space-5); }
+      .dashboard-intro { align-items: flex-start; flex-direction: column; gap: var(--space-3); }
+      .admin-form { grid-template-columns: 1fr; }
+      .score-preview { grid-column: auto; }
+      .panel__header { align-items: stretch; flex-direction: column; }
+      .toolbar, .toolbar .field { width: 100%; }
+      .confirmation__actions .button { width: 100%; }
+      th, td { padding-inline: 0.55rem; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { scroll-behavior: auto !important; animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
+    }
+  </style>
 </head>
-<body class="bg-slate-900 text-slate-100 min-h-screen p-4 md:p-8">
-
-  <div class="max-w-4xl mx-auto space-y-6">
-    
-    <!-- Header -->
-    <header class="flex justify-between items-center bg-slate-800 p-4 rounded-xl border border-slate-700 shadow-lg">
-      <h1 class="text-2xl font-black text-indigo-400">✨ Aura Leaderboard</h1>
-      <div id="user-info" class="hidden flex items-center gap-3">
-        <span id="user-name" class="font-semibold text-slate-300"></span>
-        <button id="logout-btn" class="text-xs bg-slate-700 hover:bg-slate-600 px-3 py-1.5 rounded transition">Изход</button>
+<body>
+  <header class="app-header">
+    <div class="app-header__inner">
+      <div class="brand">
+        <h1 class="brand__name">Аура</h1>
+        <p class="brand__tagline">Признание за конкретния принос на екипа</p>
       </div>
-    </header>
+      <div id="user-info" class="user-menu hidden">
+        <div class="user-menu__identity">
+          <span id="user-name" class="user-menu__name"></span>
+          <span id="connection-status" class="connection-status">Свързване…</span>
+        </div>
+        <button id="logout-btn" type="button" class="button button--secondary">Изход</button>
+      </div>
+    </div>
+  </header>
 
-    <!-- СЕКЦИЯ: Вход / Регистрация -->
-    <div id="auth-section" class="max-w-md mx-auto bg-slate-800 rounded-xl p-6 border border-slate-700 shadow-2xl">
-      <h2 class="text-xl font-bold text-center mb-4 text-indigo-400">Вход в системата</h2>
-      <div id="auth-message" class="hidden p-3 rounded mb-4 text-sm font-medium"></div>
+  <main class="page-shell">
+    <section id="auth-section" class="auth-card" aria-labelledby="auth-title">
+      <header class="auth-card__header">
+        <h2 id="auth-title">Вход в Аура</h2>
+        <p id="auth-description" class="auth-card__description">Влезте, за да видите признанията и промените за текущия месец.</p>
+      </header>
 
-      <form id="auth-form" class="space-y-4">
-        <div>
-          <label class="block text-xs uppercase font-bold text-slate-400 mb-1">Имейл</label>
-          <input type="email" id="email" required class="w-full p-2.5 bg-slate-900 border border-slate-700 rounded text-white focus:outline-none focus:border-indigo-500">
+      <div id="auth-message" class="message hidden" role="status" aria-live="polite"></div>
+
+      <form id="auth-form" class="form-stack" novalidate>
+        <div class="field">
+          <label for="email">Имейл</label>
+          <input type="email" id="email" name="email" autocomplete="email" inputmode="email" required class="control">
         </div>
-        <div id="username-container" class="hidden">
-          <label class="block text-xs uppercase font-bold text-slate-400 mb-1">Вашето Име</label>
-          <input type="text" id="username" class="w-full p-2.5 bg-slate-900 border border-slate-700 rounded text-white focus:outline-none focus:border-indigo-500">
+        <div id="username-container" class="field hidden">
+          <label for="username">Вашето име</label>
+          <input type="text" id="username" name="username" autocomplete="name" minlength="2" maxlength="80" class="control" aria-describedby="username-hint">
+          <p id="username-hint" class="field__hint">Името ще бъде видимо в класацията.</p>
         </div>
-        <div>
-          <label class="block text-xs uppercase font-bold text-slate-400 mb-1">Парола</label>
-          <input type="password" id="password" required class="w-full p-2.5 bg-slate-900 border border-slate-700 rounded text-white focus:outline-none focus:border-indigo-500">
+        <div class="field">
+          <label for="password">Парола</label>
+          <input type="password" id="password" name="password" autocomplete="current-password" required class="control" aria-describedby="password-hint">
+          <p id="password-hint" class="field__hint">Въведете паролата за вашия акаунт.</p>
         </div>
-        <button type="submit" id="submit-btn" class="w-full bg-indigo-600 hover:bg-indigo-500 font-bold py-2.5 rounded transition">Вход</button>
+        <button type="submit" id="submit-btn" class="button button--primary button--full">Вход</button>
       </form>
 
-      <button id="toggle-mode-btn" class="w-full text-center mt-4 text-xs text-indigo-400 hover:underline">
-        Нямате акаунт? Поискайте достъп тук.
-      </button>
-    </div>
-
-    <!-- СЕКЦИЯ: Dashboard -->
-    <div id="dashboard-section" class="hidden space-y-6">
-      
-      <!-- АДМИН ПАНЕЛ -->
-      <div id="admin-panel" class="hidden bg-slate-800/80 border border-amber-500/30 p-5 rounded-xl shadow-lg">
-        <h3 class="text-lg font-bold text-amber-400 mb-3 flex items-center gap-2">🛡️ Админ Панел (Промяна на Аура)</h3>
-        <form id="aura-form" class="grid grid-cols-1 md:grid-cols-4 gap-3">
-          <select id="target-user" required class="bg-slate-900 border border-slate-700 p-2.5 rounded text-sm focus:outline-none text-white">
-            <option value="">Изберете колега...</option>
-          </select>
-          <input type="number" id="aura-points" placeholder="Точки (напр. 500 или -200)" required class="bg-slate-900 border border-slate-700 p-2.5 rounded text-sm focus:outline-none text-white">
-          <input type="text" id="aura-reason" placeholder="Причина (напр. 'Донесе понички')" required class="bg-slate-900 border border-slate-700 p-2.5 rounded text-sm focus:outline-none text-white">
-          <button type="submit" class="bg-amber-600 hover:bg-amber-500 font-bold p-2.5 rounded text-sm transition">Приложи</button>
-        </form>
+      <div class="auth-actions">
+        <button id="forgot-password-btn" type="button" class="button button--text">Забравена парола</button>
+        <button id="toggle-mode-btn" type="button" class="button button--text">Нямате акаунт? Поискайте достъп</button>
       </div>
+    </section>
 
-      <!-- КЛАСАЦИЯ -->
-      <div class="bg-slate-800 rounded-xl p-5 border border-slate-700 shadow-lg">
-        <h3 class="text-lg font-bold text-slate-200 mb-4">🏆 Класация за Месеца</h3>
-        <div class="overflow-x-auto">
-          <table class="w-full text-left border-collapse">
-            <thead>
-              <tr class="border-b border-slate-700 text-xs text-slate-400 uppercase">
-                <th class="p-3">#</th>
-                <th class="p-3">Колега</th>
-                <th class="p-3 text-right">Аура</th>
-              </tr>
-            </thead>
-            <tbody id="leaderboard-body">
-              <!-- Динамични данни -->
-            </tbody>
-          </table>
+    <section id="dashboard-section" class="stack hidden" aria-labelledby="dashboard-title" aria-busy="false">
+      <header class="dashboard-intro">
+        <div>
+          <h2 id="dashboard-title">Признание за екипа</h2>
+          <p>Вижте приноса за текущия месец и причината зад всяка промяна.</p>
+        </div>
+        <span id="month-chip" class="month-chip"></span>
+      </header>
+
+      <section class="policy-note" aria-labelledby="policy-title">
+        <h3 id="policy-title">Ясни правила, конкретна причина</h3>
+        <p>Аурата отбелязва конкретен принос, а не оценява човека. Всяка промяна изисква причина и остава в хронологията. Отрицателните стойности се използват за корекции; при спор се обърнете към администратор.</p>
+      </section>
+
+      <div id="dashboard-message" class="message message--error hidden" role="alert">
+        <span id="dashboard-message-text"></span>
+        <div class="message__actions">
+          <button id="retry-dashboard-btn" type="button" class="button button--secondary">Опитайте отново</button>
         </div>
       </div>
 
-      <!-- ХРОНОЛОГИЯ (FEED) -->
-      <div class="bg-slate-800 rounded-xl p-5 border border-slate-700 shadow-lg">
-        <h3 class="text-lg font-bold text-slate-200 mb-4">📜 Последна активност</h3>
-        <div id="logs-container" class="space-y-3 text-sm">
-          <!-- Динамични данни -->
+      <section id="admin-panel" class="panel admin-panel hidden" aria-labelledby="admin-title">
+        <header class="panel__header">
+          <div>
+            <h3 id="admin-title">Добавяне на признание или корекция</h3>
+            <p>Първо прегледайте резултата, след това потвърдете промяната.</p>
+          </div>
+        </header>
+        <div class="panel__body">
+          <form id="aura-form" class="admin-form" novalidate>
+            <div class="field">
+              <label for="colleague-search">Търсене</label>
+              <input type="search" id="colleague-search" name="colleague-search" class="control" placeholder="Име на колега" autocomplete="off">
+            </div>
+            <div class="field">
+              <label for="target-user">Колега</label>
+              <select id="target-user" name="target-user" required class="control" aria-describedby="target-user-hint">
+                <option value="">Изберете колега</option>
+              </select>
+              <p id="target-user-hint" class="field__hint">Търсенето филтрира списъка.</p>
+            </div>
+            <div class="field">
+              <label for="aura-points">Промяна</label>
+              <input type="number" id="aura-points" name="aura-points" min="-1000" max="1000" step="1" placeholder="напр. 50" required class="control" aria-describedby="points-hint">
+              <p id="points-hint" class="field__hint">Между −1000 и +1000.</p>
+            </div>
+            <div class="field">
+              <label for="aura-reason">Причина</label>
+              <input type="text" id="aura-reason" name="aura-reason" minlength="5" maxlength="160" placeholder="Опишете конкретния принос" required class="control" aria-describedby="reason-hint">
+              <p id="reason-hint" class="field__hint">5–160 знака, видими в хронологията.</p>
+            </div>
+            <button type="submit" id="preview-aura-btn" class="button button--primary admin-form__action">Преглед</button>
+
+            <div id="score-preview" class="score-preview hidden" aria-live="polite">
+              <div class="score-preview__item"><span class="score-preview__label">Текущо</span><strong id="current-score" class="score-preview__value">0</strong></div>
+              <div class="score-preview__item"><span class="score-preview__label">Промяна</span><strong id="score-change" class="score-preview__value">0</strong></div>
+              <div class="score-preview__item"><span class="score-preview__label">Очаквано</span><strong id="resulting-score" class="score-preview__value">0</strong></div>
+            </div>
+          </form>
+
+          <section id="aura-confirmation" class="confirmation hidden" aria-labelledby="confirmation-title">
+            <h4 id="confirmation-title">Потвърдете промяната</h4>
+            <p id="confirmation-copy"></p>
+            <div class="confirmation__actions">
+              <button id="confirm-aura-btn" type="button" class="button button--primary">Потвърждавам</button>
+              <button id="edit-aura-btn" type="button" class="button button--secondary">Редактиране</button>
+            </div>
+          </section>
+
+          <div id="aura-message" class="message hidden" role="status" aria-live="polite">
+            <span id="aura-message-text"></span>
+            <div class="message__actions">
+              <button id="reverse-aura-btn" type="button" class="button button--secondary hidden">Подгответе обратна корекция</button>
+            </div>
+          </div>
         </div>
+      </section>
+
+      <div class="dashboard-grid">
+        <section class="panel" aria-labelledby="leaderboard-title">
+          <header class="panel__header">
+            <div>
+              <h3 id="leaderboard-title">Класация за месеца</h3>
+              <p id="month-range"></p>
+            </div>
+            <div class="toolbar">
+              <div class="field">
+                <label for="leaderboard-search">Намерете колега</label>
+                <input type="search" id="leaderboard-search" class="control" placeholder="Търсене по име" autocomplete="off">
+              </div>
+            </div>
+          </header>
+          <div class="table-scroll">
+            <table>
+              <thead>
+                <tr>
+                  <th scope="col" class="rank">Място</th>
+                  <th scope="col">Колега</th>
+                  <th scope="col" class="number">Аура</th>
+                </tr>
+              </thead>
+              <tbody id="leaderboard-body"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="panel" aria-labelledby="activity-title">
+          <header class="panel__header">
+            <div>
+              <h3 id="activity-title">Последни промени</h3>
+              <p>Кой, защо и кога е получил точки.</p>
+            </div>
+            <div class="toolbar">
+              <div class="field">
+                <label for="activity-filter">Показване</label>
+                <select id="activity-filter" class="control">
+                  <option value="all">Всички</option>
+                  <option value="positive">Признания</option>
+                  <option value="negative">Корекции</option>
+                </select>
+              </div>
+            </div>
+          </header>
+          <div class="panel__body">
+            <ul id="logs-container" class="activity-list"></ul>
+          </div>
+        </section>
       </div>
-
-    </div>
-
-  </div>
+    </section>
+  </main>
 
 <script>
+  // Public browser configuration. Replace both values for the destination project.
+  // Never place an sb_secret_* or service_role key in this file.
   const SUPABASE_URL = 'https://gemfaemxsdmyqawclmyv.supabase.co';
-  const SUPABASE_ANON_KEY = 'sb_publishable_W4X4NAdj2b5S4fNdVJFStw_A7K1cO8-';
-  const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_W4X4NAdj2b5S4fNdVJFStw_A7K1cO8-';
+  const supabaseClient = window.supabase?.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY) ?? null;
 
-  let currentUser = null;
-  let currentUserProfile = null;
-  let isSignUp = false;
+  const state = {
+    currentUser: null,
+    currentUserProfile: null,
+    isSignUp: false,
+    profiles: [],
+    profilesById: new Map(),
+    logs: [],
+    pendingAuraChange: null,
+    lastAuraChange: null,
+    realtimeChannel: null,
+    realtimeRefreshTimer: null,
+    dashboardRequestId: 0
+  };
 
-  // Инициализация при зареждане
-  window.addEventListener('DOMContentLoaded', async () => {
-    const { data: { session } } = await supabaseClient.auth.getSession();
-    if (session) {
-      currentUser = session.user;
-      await loadUserProfile();
-    }
-  });
+  const elements = {
+    authSection: document.getElementById('auth-section'),
+    authTitle: document.getElementById('auth-title'),
+    authDescription: document.getElementById('auth-description'),
+    authMessage: document.getElementById('auth-message'),
+    authForm: document.getElementById('auth-form'),
+    email: document.getElementById('email'),
+    usernameContainer: document.getElementById('username-container'),
+    username: document.getElementById('username'),
+    password: document.getElementById('password'),
+    passwordHint: document.getElementById('password-hint'),
+    submitButton: document.getElementById('submit-btn'),
+    forgotPasswordButton: document.getElementById('forgot-password-btn'),
+    toggleModeButton: document.getElementById('toggle-mode-btn'),
+    userInfo: document.getElementById('user-info'),
+    userName: document.getElementById('user-name'),
+    connectionStatus: document.getElementById('connection-status'),
+    logoutButton: document.getElementById('logout-btn'),
+    dashboardSection: document.getElementById('dashboard-section'),
+    dashboardMessage: document.getElementById('dashboard-message'),
+    dashboardMessageText: document.getElementById('dashboard-message-text'),
+    retryDashboardButton: document.getElementById('retry-dashboard-btn'),
+    monthChip: document.getElementById('month-chip'),
+    monthRange: document.getElementById('month-range'),
+    adminPanel: document.getElementById('admin-panel'),
+    auraForm: document.getElementById('aura-form'),
+    colleagueSearch: document.getElementById('colleague-search'),
+    targetUser: document.getElementById('target-user'),
+    auraPoints: document.getElementById('aura-points'),
+    auraReason: document.getElementById('aura-reason'),
+    scorePreview: document.getElementById('score-preview'),
+    currentScore: document.getElementById('current-score'),
+    scoreChange: document.getElementById('score-change'),
+    resultingScore: document.getElementById('resulting-score'),
+    auraConfirmation: document.getElementById('aura-confirmation'),
+    confirmationTitle: document.getElementById('confirmation-title'),
+    confirmationCopy: document.getElementById('confirmation-copy'),
+    confirmAuraButton: document.getElementById('confirm-aura-btn'),
+    editAuraButton: document.getElementById('edit-aura-btn'),
+    auraMessage: document.getElementById('aura-message'),
+    auraMessageText: document.getElementById('aura-message-text'),
+    reverseAuraButton: document.getElementById('reverse-aura-btn'),
+    leaderboardSearch: document.getElementById('leaderboard-search'),
+    leaderboardBody: document.getElementById('leaderboard-body'),
+    activityFilter: document.getElementById('activity-filter'),
+    logsContainer: document.getElementById('logs-container')
+  };
 
-  // Изход
-document.getElementById('logout-btn').addEventListener('click', async () => {
-  if (realtimeChannel) {
-    await supabaseClient.removeChannel(realtimeChannel);
-    realtimeChannel = null;
+  const scoreFormatter = new Intl.NumberFormat('bg-BG', { signDisplay: 'exceptZero' });
+  const dateTimeFormatter = new Intl.DateTimeFormat('bg-BG', { dateStyle: 'medium', timeStyle: 'short' });
+  const monthFormatter = new Intl.DateTimeFormat('bg-BG', { month: 'long', year: 'numeric' });
+  const dateFormatter = new Intl.DateTimeFormat('bg-BG', { day: 'numeric', month: 'long', year: 'numeric' });
+
+  function formatScore(value) {
+    return scoreFormatter.format(Number(value) || 0);
   }
-  await supabaseClient.auth.signOut();
-  location.reload();
-});
 
-  // Превключване Вход / Регистрация
-  document.getElementById('toggle-mode-btn').addEventListener('click', () => {
-    isSignUp = !isSignUp;
-    document.getElementById('username-container').classList.toggle('hidden', !isSignUp);
-    document.getElementById('submit-btn').textContent = isSignUp ? 'Изпрати заявка' : 'Вход';
-    document.getElementById('toggle-mode-btn').textContent = isSignUp ? 'Вече имате акаунт? Влезте' : 'Нямате акаунт? Поискайте достъп тук.';
-  });
+  function formatDateTime(value) {
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? 'Неизвестна дата' : dateTimeFormatter.format(date);
+  }
 
-  // Форма Вход/Регистрация
-  document.getElementById('auth-form').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const email = document.getElementById('email').value;
-    const password = document.getElementById('password').value;
-    const username = document.getElementById('username').value;
-    const msgBox = document.getElementById('auth-message');
+  function updateMonthContext() {
+    const now = new Date();
+    const start = new Date(now.getFullYear(), now.getMonth(), 1);
+    const end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+    const label = monthFormatter.format(now);
+    elements.monthChip.textContent = label.charAt(0).toUpperCase() + label.slice(1);
+    elements.monthRange.textContent = `${dateFormatter.format(start)} – ${dateFormatter.format(end)}`;
+  }
+
+  function setButtonLoading(button, isLoading, loadingText = 'Зареждане…') {
+    if (isLoading) {
+      button.dataset.defaultLabel = button.textContent;
+      button.textContent = loadingText;
+      button.disabled = true;
+      button.setAttribute('aria-busy', 'true');
+      return;
+    }
+
+    button.textContent = button.dataset.defaultLabel || button.textContent;
+    delete button.dataset.defaultLabel;
+    button.disabled = false;
+    button.removeAttribute('aria-busy');
+  }
+
+  function showAuthMessage(text, tone = 'info') {
+    elements.authMessage.className = `message message--${tone}`;
+    elements.authMessage.setAttribute('role', tone === 'error' ? 'alert' : 'status');
+    elements.authMessage.textContent = text;
+  }
+
+  function clearAuthMessage() {
+    elements.authMessage.className = 'message hidden';
+    elements.authMessage.textContent = '';
+  }
+
+  function showAuraMessage(text, tone = 'info', showReverse = false) {
+    elements.auraMessage.className = `message message--${tone}`;
+    elements.auraMessage.setAttribute('role', tone === 'error' ? 'alert' : 'status');
+    elements.auraMessageText.textContent = text;
+    elements.reverseAuraButton.classList.toggle('hidden', !showReverse);
+  }
+
+  function hideAuraMessage() {
+    elements.auraMessage.className = 'message hidden';
+    elements.auraMessageText.textContent = '';
+    elements.reverseAuraButton.classList.add('hidden');
+  }
+
+  function showDashboardError(text) {
+    elements.dashboardMessageText.textContent = text;
+    elements.dashboardMessage.classList.remove('hidden');
+  }
+
+  function clearDashboardError() {
+    elements.dashboardMessage.classList.add('hidden');
+    elements.dashboardMessageText.textContent = '';
+  }
+
+  function localizeAuthError(error) {
+    const message = String(error?.message || '').toLowerCase();
+    if (message.includes('invalid login credentials')) return 'Невалиден имейл или парола.';
+    if (message.includes('email not confirmed')) return 'Потвърдете имейла си, преди да влезете.';
+    if (message.includes('already registered') || message.includes('user already exists')) return 'Вече има акаунт с този имейл.';
+    if (message.includes('password') && message.includes('least')) return 'Паролата не отговаря на минималните изисквания.';
+    if (message.includes('rate limit')) return 'Направени са твърде много опити. Изчакайте и опитайте отново.';
+    return 'Възникна грешка. Проверете данните си и опитайте отново.';
+  }
+
+  function setAuthBusy(isBusy, label = 'Зареждане…') {
+    for (const control of elements.authForm.elements) {
+      control.disabled = isBusy;
+    }
+    elements.toggleModeButton.disabled = isBusy;
+    elements.forgotPasswordButton.disabled = isBusy;
+    setButtonLoading(elements.submitButton, isBusy, label);
+  }
+
+  function setConnectionStatus(text, status = 'connected') {
+    elements.connectionStatus.textContent = text;
+    elements.connectionStatus.dataset.state = status;
+  }
+
+  function setAuthMode(isSignUp) {
+    state.isSignUp = isSignUp;
+    elements.usernameContainer.classList.toggle('hidden', !isSignUp);
+    elements.username.required = isSignUp;
+    elements.password.setAttribute('autocomplete', isSignUp ? 'new-password' : 'current-password');
+    elements.forgotPasswordButton.classList.toggle('hidden', isSignUp);
 
     if (isSignUp) {
-      const { error } = await supabaseClient.auth.signUp({ email, password, options: { data: { username } } });
-      if (error) showMsg(msgBox, error.message, 'bg-red-500/20 text-red-400');
-      else showMsg(msgBox, 'Заявката е изпратена! Изчакайте админ да ви одобри.', 'bg-green-500/20 text-green-400');
+      elements.authTitle.textContent = 'Заявка за достъп';
+      elements.authDescription.textContent = 'Създайте акаунт. Администратор ще го одобри, преди да можете да влезете.';
+      elements.password.minLength = 8;
+      elements.passwordHint.textContent = 'Използвайте поне 8 знака.';
+      elements.submitButton.textContent = 'Изпратете заявка';
+      elements.toggleModeButton.textContent = 'Вече имате акаунт? Влезте';
     } else {
+      elements.authTitle.textContent = 'Вход в Аура';
+      elements.authDescription.textContent = 'Влезте, за да видите признанията и промените за текущия месец.';
+      elements.password.removeAttribute('minlength');
+      elements.passwordHint.textContent = 'Въведете паролата за вашия акаунт.';
+      elements.submitButton.textContent = 'Вход';
+      elements.toggleModeButton.textContent = 'Нямате акаунт? Поискайте достъп';
+      elements.username.value = '';
+    }
+
+    elements.password.value = '';
+    clearAuthMessage();
+  }
+
+  async function handleAuthSubmit(event) {
+    event.preventDefault();
+    clearAuthMessage();
+
+    const username = elements.username.value.trim();
+    if (state.isSignUp && username.length < 2) {
+      elements.username.setCustomValidity('Въведете поне 2 знака.');
+    } else {
+      elements.username.setCustomValidity('');
+    }
+
+    if (!elements.authForm.checkValidity()) {
+      elements.authForm.reportValidity();
+      return;
+    }
+
+    setAuthBusy(true, state.isSignUp ? 'Изпращане…' : 'Влизане…');
+
+    try {
+      const email = elements.email.value.trim();
+      const password = elements.password.value;
+
+      if (state.isSignUp) {
+        const { error } = await supabaseClient.auth.signUp({
+          email,
+          password,
+          options: { data: { username } }
+        });
+
+        if (error) {
+          showAuthMessage(localizeAuthError(error), 'error');
+          return;
+        }
+
+        elements.authForm.reset();
+        showAuthMessage('Заявката е изпратена. Ще можете да влезете, след като администратор одобри акаунта.', 'success');
+        return;
+      }
+
       const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
-      if (error) showMsg(msgBox, error.message, 'bg-red-500/20 text-red-400');
-      else {
-        currentUser = data.user;
+      if (error) {
+        showAuthMessage(localizeAuthError(error), 'error');
+        return;
+      }
+
+      state.currentUser = data.user;
+      await loadUserProfile();
+    } catch {
+      showAuthMessage('Услугата временно не отговаря. Проверете връзката си и опитайте отново.', 'error');
+    } finally {
+      if (!elements.authSection.classList.contains('hidden')) {
+        setAuthBusy(false);
+      }
+    }
+  }
+
+  async function handleForgotPassword() {
+    clearAuthMessage();
+    if (!elements.email.checkValidity()) {
+      elements.email.reportValidity();
+      elements.email.focus();
+      return;
+    }
+
+    setButtonLoading(elements.forgotPasswordButton, true, 'Изпращане…');
+    try {
+      const { error } = await supabaseClient.auth.resetPasswordForEmail(elements.email.value.trim());
+      if (error) {
+        showAuthMessage(localizeAuthError(error), 'error');
+        return;
+      }
+      showAuthMessage('Изпратихме инструкции за нова парола, ако има акаунт с този имейл.', 'success');
+    } catch {
+      showAuthMessage('Не успяхме да изпратим инструкции. Проверете връзката си и опитайте отново.', 'error');
+    } finally {
+      setButtonLoading(elements.forgotPasswordButton, false);
+    }
+  }
+
+  async function loadUserProfile() {
+    const { data: profile, error } = await supabaseClient
+      .from('profiles')
+      .select('id, username, is_admin, is_approved')
+      .eq('id', state.currentUser.id)
+      .maybeSingle();
+
+    if (error) {
+      showAuthMessage('Не успяхме да заредим профила ви. Опитайте да влезете отново.', 'error');
+      return;
+    }
+
+    if (!profile || !profile.is_approved) {
+      await supabaseClient.auth.signOut();
+      state.currentUser = null;
+      showAuthMessage('Акаунтът още не е одобрен. Свържете се с администратор, ако чакате по-дълго от очакваното.', 'warning');
+      return;
+    }
+
+    state.currentUserProfile = profile;
+    elements.authSection.classList.add('hidden');
+    elements.dashboardSection.classList.remove('hidden');
+    elements.userInfo.classList.remove('hidden');
+    elements.userName.textContent = profile.username;
+    elements.userName.title = profile.username;
+    elements.adminPanel.classList.toggle('hidden', !profile.is_admin);
+    await loadDashboardData();
+    subscribeToRealtime();
+  }
+
+  function renderLoadingState() {
+    elements.leaderboardBody.replaceChildren();
+    const row = document.createElement('tr');
+    const cell = document.createElement('td');
+    cell.colSpan = 3;
+    cell.className = 'empty-state';
+    cell.setAttribute('aria-label', 'Зареждане на класацията');
+    for (let index = 0; index < 3; index += 1) {
+      const skeleton = document.createElement('div');
+      skeleton.className = 'skeleton';
+      cell.appendChild(skeleton);
+    }
+    row.appendChild(cell);
+    elements.leaderboardBody.appendChild(row);
+
+    elements.logsContainer.replaceChildren();
+    const item = document.createElement('li');
+    item.className = 'empty-state';
+    item.setAttribute('aria-label', 'Зареждане на активността');
+    for (let index = 0; index < 3; index += 1) {
+      const skeleton = document.createElement('div');
+      skeleton.className = 'skeleton';
+      item.appendChild(skeleton);
+    }
+    elements.logsContainer.appendChild(item);
+  }
+
+  async function loadDashboardData() {
+    const requestId = ++state.dashboardRequestId;
+    const selectedUserId = elements.targetUser.value;
+    elements.dashboardSection.setAttribute('aria-busy', 'true');
+    clearDashboardError();
+    renderLoadingState();
+
+    try {
+      const [profilesResult, logsResult] = await Promise.all([
+        supabaseClient
+          .from('profiles')
+          .select('id, username, aura_points, is_admin')
+          .eq('is_approved', true)
+          .order('aura_points', { ascending: false }),
+        supabaseClient
+          .from('aura_logs')
+          .select('user_id, admin_id, points, reason, created_at, profiles!aura_logs_user_id_fkey(username)')
+          .order('created_at', { ascending: false })
+          .limit(10)
+      ]);
+
+      if (requestId !== state.dashboardRequestId) return;
+
+      if (profilesResult.error || logsResult.error) {
+        showDashboardError('Част от данните не се заредиха. Опитайте отново. Въведените стойности във формата са запазени.');
+      }
+
+      state.profiles = profilesResult.data || [];
+      state.profilesById = new Map(state.profiles.map((profile) => [profile.id, profile]));
+      state.logs = logsResult.data || [];
+
+      const refreshedCurrentProfile = state.profilesById.get(state.currentUser?.id);
+      const stillHasAdminAccess = Boolean(refreshedCurrentProfile?.is_admin);
+      if (state.currentUserProfile) {
+        state.currentUserProfile.is_admin = stillHasAdminAccess;
+      }
+      elements.adminPanel.classList.toggle('hidden', !stillHasAdminAccess);
+      if (!stillHasAdminAccess) {
+        state.pendingAuraChange = null;
+        elements.auraConfirmation.classList.add('hidden');
+      }
+
+      fillTargetOptions(elements.colleagueSearch.value, selectedUserId);
+      renderLeaderboard();
+      renderLogs();
+      updateScorePreview();
+    } catch {
+      if (requestId !== state.dashboardRequestId) return;
+      state.profiles = [];
+      state.profilesById = new Map();
+      state.logs = [];
+      fillTargetOptions();
+      renderLeaderboard();
+      renderLogs();
+      showDashboardError('Не успяхме да заредим данните. Проверете връзката си и опитайте отново.');
+    } finally {
+      if (requestId === state.dashboardRequestId) {
+        elements.dashboardSection.setAttribute('aria-busy', 'false');
+      }
+    }
+  }
+
+  function fillTargetOptions(searchTerm = '', selectedUserId = elements.targetUser.value) {
+    const normalizedTerm = searchTerm.trim().toLocaleLowerCase('bg-BG');
+    const filteredProfiles = state.profiles.filter((profile) =>
+      String(profile.username || '').toLocaleLowerCase('bg-BG').includes(normalizedTerm)
+    );
+
+    elements.targetUser.replaceChildren();
+    const placeholder = document.createElement('option');
+    placeholder.value = '';
+    placeholder.textContent = filteredProfiles.length ? 'Изберете колега' : 'Няма намерени колеги';
+    elements.targetUser.appendChild(placeholder);
+
+    for (const profile of filteredProfiles) {
+      const option = document.createElement('option');
+      option.value = profile.id;
+      option.textContent = profile.username || 'Потребител без име';
+      option.selected = profile.id === selectedUserId;
+      elements.targetUser.appendChild(option);
+    }
+
+    elements.targetUser.disabled = filteredProfiles.length === 0;
+  }
+
+  function appendEmptyTableRow(message) {
+    const row = document.createElement('tr');
+    const cell = document.createElement('td');
+    cell.colSpan = 3;
+    cell.className = 'empty-state';
+    cell.textContent = message;
+    row.appendChild(cell);
+    elements.leaderboardBody.appendChild(row);
+  }
+
+  function renderLeaderboard() {
+    const searchTerm = elements.leaderboardSearch.value.trim().toLocaleLowerCase('bg-BG');
+    const visibleProfiles = state.profiles.filter((profile) =>
+      String(profile.username || '').toLocaleLowerCase('bg-BG').includes(searchTerm)
+    );
+
+    elements.leaderboardBody.replaceChildren();
+    if (visibleProfiles.length === 0) {
+      appendEmptyTableRow(state.profiles.length ? 'Няма колеги, които съвпадат с търсенето.' : 'Все още няма одобрени колеги в класацията.');
+      return;
+    }
+
+    visibleProfiles.forEach((profile) => {
+      const originalRank = state.profiles.findIndex((item) => item.id === profile.id) + 1;
+      const points = Number(profile.aura_points) || 0;
+      const row = document.createElement('tr');
+      row.dataset.currentUser = String(profile.id === state.currentUser?.id);
+
+      const rankCell = document.createElement('td');
+      rankCell.className = 'rank';
+      rankCell.textContent = String(originalRank);
+
+      const personCell = document.createElement('td');
+      const person = document.createElement('div');
+      person.className = 'person';
+      const name = document.createElement('span');
+      name.textContent = profile.username || 'Потребител без име';
+      person.appendChild(name);
+
+      if (profile.id === state.currentUser?.id) {
+        const badge = document.createElement('span');
+        badge.className = 'badge';
+        badge.textContent = 'Вие';
+        person.appendChild(badge);
+      }
+
+      if (profile.is_admin) {
+        const badge = document.createElement('span');
+        badge.className = 'badge';
+        badge.textContent = 'Администратор';
+        person.appendChild(badge);
+      }
+
+      personCell.appendChild(person);
+
+      const scoreCell = document.createElement('td');
+      scoreCell.className = `number score ${points < 0 ? 'score--negative' : 'score--positive'}`;
+      scoreCell.textContent = formatScore(points);
+      scoreCell.setAttribute('aria-label', points < 0 ? `${Math.abs(points)} точки под нулата` : `${points} точки`);
+
+      row.append(rankCell, personCell, scoreCell);
+      elements.leaderboardBody.appendChild(row);
+    });
+  }
+
+  function renderLogs() {
+    const filter = elements.activityFilter.value;
+    const visibleLogs = state.logs.filter((log) => {
+      const points = Number(log.points) || 0;
+      if (filter === 'positive') return points >= 0;
+      if (filter === 'negative') return points < 0;
+      return true;
+    });
+
+    elements.logsContainer.replaceChildren();
+    if (visibleLogs.length === 0) {
+      const item = document.createElement('li');
+      item.className = 'empty-state';
+      item.textContent = state.logs.length ? 'Няма промени от този тип.' : 'Все още няма промени. Първото конкретно признание ще се появи тук.';
+      elements.logsContainer.appendChild(item);
+      return;
+    }
+
+    for (const log of visibleLogs) {
+      const points = Number(log.points) || 0;
+      const item = document.createElement('li');
+      item.className = 'activity-item';
+
+      const content = document.createElement('div');
+      const person = document.createElement('div');
+      person.className = 'activity-item__person';
+      person.textContent = log.profiles?.username || 'Потребител без име';
+      const reason = document.createElement('div');
+      reason.className = 'activity-item__reason';
+      reason.textContent = log.reason || 'Няма посочена причина';
+      const meta = document.createElement('div');
+      meta.className = 'activity-item__meta';
+      const time = document.createElement('time');
+      time.dateTime = log.created_at || '';
+      time.textContent = formatDateTime(log.created_at);
+      meta.append(`${log.admin_id === state.currentUser?.id ? 'От вас' : 'От администратор'} · `, time);
+      content.append(person, reason, meta);
+
+      const score = document.createElement('span');
+      score.className = `score ${points < 0 ? 'score--negative' : 'score--positive'}`;
+      score.textContent = formatScore(points);
+      score.setAttribute('aria-label', points < 0 ? `Корекция с ${Math.abs(points)} точки` : `Признание с ${points} точки`);
+
+      item.append(content, score);
+      elements.logsContainer.appendChild(item);
+    }
+  }
+
+  function setScoreTone(element, value) {
+    element.classList.toggle('score--negative', value < 0);
+    element.classList.toggle('score--positive', value >= 0);
+  }
+
+  function updateScorePreview(hideConfirmation = true) {
+    const profile = state.profilesById.get(elements.targetUser.value);
+    const points = Number(elements.auraPoints.value);
+    const hasPoints = elements.auraPoints.value !== '' && Number.isFinite(points);
+
+    if (!profile || !hasPoints) {
+      elements.scorePreview.classList.add('hidden');
+    } else {
+      const current = Number(profile.aura_points) || 0;
+      const resulting = current + points;
+      elements.currentScore.textContent = formatScore(current);
+      elements.scoreChange.textContent = formatScore(points);
+      elements.resultingScore.textContent = formatScore(resulting);
+      setScoreTone(elements.currentScore, current);
+      setScoreTone(elements.scoreChange, points);
+      setScoreTone(elements.resultingScore, resulting);
+      elements.scorePreview.classList.remove('hidden');
+    }
+
+    if (hideConfirmation) {
+      state.pendingAuraChange = null;
+      elements.auraConfirmation.classList.add('hidden');
+    }
+  }
+
+  function prepareAuraConfirmation(event) {
+    event.preventDefault();
+    hideAuraMessage();
+
+    const points = Number(elements.auraPoints.value);
+    const reason = elements.auraReason.value.trim();
+    elements.auraPoints.setCustomValidity(points === 0 ? 'Промяната трябва да е различна от нула.' : '');
+    elements.auraReason.setCustomValidity(reason.length < 5 ? 'Опишете причината с поне 5 знака.' : '');
+
+    if (!elements.auraForm.checkValidity()) {
+      elements.auraForm.reportValidity();
+      return;
+    }
+
+    const profile = state.profilesById.get(elements.targetUser.value);
+    if (!profile) {
+      elements.targetUser.setCustomValidity('Изберете колега от списъка.');
+      elements.targetUser.reportValidity();
+      return;
+    }
+
+    elements.targetUser.setCustomValidity('');
+    const currentScore = Number(profile.aura_points) || 0;
+    state.pendingAuraChange = {
+      userId: profile.id,
+      username: profile.username || 'Потребител без име',
+      points,
+      reason,
+      currentScore,
+      resultingScore: currentScore + points
+    };
+
+    updateScorePreview(false);
+    elements.auraConfirmation.classList.toggle('confirmation--warning', points < 0);
+    elements.confirmationCopy.textContent = `${state.pendingAuraChange.username}: ${formatScore(currentScore)} → ${formatScore(state.pendingAuraChange.resultingScore)}. Причина: ${reason}`;
+    elements.auraConfirmation.classList.remove('hidden');
+    elements.confirmationTitle.tabIndex = -1;
+    elements.confirmationTitle.focus();
+  }
+
+  async function saveAuraChange() {
+    if (!state.pendingAuraChange || !state.currentUser) return;
+
+    const change = { ...state.pendingAuraChange };
+    const isValidChange = Number.isInteger(change.points)
+      && change.points !== 0
+      && Math.abs(change.points) <= 1000
+      && change.reason.length >= 5
+      && change.reason.length <= 160
+      && state.profilesById.has(change.userId);
+
+    if (!state.currentUserProfile?.is_admin || !isValidChange) {
+      state.pendingAuraChange = null;
+      elements.auraConfirmation.classList.add('hidden');
+      showAuraMessage('Промяната беше отказана. Обновете данните и проверете администраторския си достъп.', 'error');
+      return;
+    }
+
+    setButtonLoading(elements.confirmAuraButton, true, 'Записване…');
+    elements.editAuraButton.disabled = true;
+
+    try {
+      const { data: { user }, error: userError } = await supabaseClient.auth.getUser();
+      if (userError || !user || user.id !== state.currentUser.id) {
+        state.pendingAuraChange = null;
+        elements.auraConfirmation.classList.add('hidden');
+        showAuraMessage('Сесията ви е изтекла. Влезте отново, преди да правите промени.', 'error');
+        return;
+      }
+
+      const { error } = await supabaseClient.from('aura_logs').insert({
+        user_id: change.userId,
+        admin_id: user.id,
+        points: change.points,
+        reason: change.reason
+      });
+
+      if (error) {
+        showAuraMessage('Промяната не беше записана. Проверете данните и опитайте отново.', 'error');
+        return;
+      }
+
+      state.lastAuraChange = change;
+      state.pendingAuraChange = null;
+      elements.auraConfirmation.classList.add('hidden');
+      elements.auraForm.reset();
+      fillTargetOptions();
+      updateScorePreview();
+      await loadDashboardData();
+      showAuraMessage(`Записахте ${formatScore(change.points)} за ${change.username}. Класацията е обновена с потвърдените данни от сървъра.`, 'success', true);
+    } catch {
+      state.pendingAuraChange = null;
+      elements.auraConfirmation.classList.add('hidden');
+      await loadDashboardData();
+      showAuraMessage('Връзката прекъсна и резултатът е неясен. Проверете „Последни промени“, преди да опитате отново, за да не създадете дублиран запис.', 'warning');
+    } finally {
+      setButtonLoading(elements.confirmAuraButton, false);
+      elements.editAuraButton.disabled = false;
+    }
+  }
+
+  function prepareReverseChange() {
+    const change = state.lastAuraChange;
+    if (!change) return;
+
+    elements.colleagueSearch.value = '';
+    fillTargetOptions('', change.userId);
+    elements.targetUser.value = change.userId;
+    elements.auraPoints.value = String(-change.points);
+    elements.auraReason.value = `Корекция на предишната промяна (${formatScore(change.points)})`;
+    hideAuraMessage();
+    updateScorePreview();
+    elements.auraReason.focus();
+  }
+
+  function scheduleDashboardRefresh() {
+    window.clearTimeout(state.realtimeRefreshTimer);
+    state.realtimeRefreshTimer = window.setTimeout(loadDashboardData, 180);
+  }
+
+  function subscribeToRealtime() {
+    if (state.realtimeChannel) return;
+
+    state.realtimeChannel = supabaseClient
+      .channel('public-changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, scheduleDashboardRefresh)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'aura_logs' }, scheduleDashboardRefresh)
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+          setConnectionStatus('Актуални данни', 'connected');
+        } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          setConnectionStatus('Обновете страницата', 'error');
+        } else {
+          setConnectionStatus('Свързване…', 'pending');
+        }
+      });
+  }
+
+  async function handleLogout() {
+    setButtonLoading(elements.logoutButton, true, 'Излизане…');
+    try {
+      if (state.realtimeChannel) {
+        await supabaseClient.removeChannel(state.realtimeChannel);
+        state.realtimeChannel = null;
+      }
+      const { error } = await supabaseClient.auth.signOut();
+      if (error) throw error;
+      window.location.reload();
+    } catch {
+      showDashboardError('Не успяхме да ви отпишем. Опитайте отново.');
+      setButtonLoading(elements.logoutButton, false);
+    }
+  }
+
+  elements.authForm.addEventListener('submit', handleAuthSubmit);
+  elements.forgotPasswordButton.addEventListener('click', handleForgotPassword);
+  elements.toggleModeButton.addEventListener('click', () => setAuthMode(!state.isSignUp));
+  elements.logoutButton.addEventListener('click', handleLogout);
+  elements.retryDashboardButton.addEventListener('click', loadDashboardData);
+  elements.auraForm.addEventListener('submit', prepareAuraConfirmation);
+  elements.confirmAuraButton.addEventListener('click', saveAuraChange);
+  elements.editAuraButton.addEventListener('click', () => {
+    state.pendingAuraChange = null;
+    elements.auraConfirmation.classList.add('hidden');
+    elements.auraPoints.focus();
+  });
+  elements.reverseAuraButton.addEventListener('click', prepareReverseChange);
+  elements.colleagueSearch.addEventListener('input', () => {
+    fillTargetOptions(elements.colleagueSearch.value);
+    updateScorePreview();
+  });
+  elements.targetUser.addEventListener('change', () => updateScorePreview());
+  elements.auraPoints.addEventListener('input', () => {
+    elements.auraPoints.setCustomValidity('');
+    updateScorePreview();
+  });
+  elements.auraReason.addEventListener('input', () => {
+    elements.auraReason.setCustomValidity('');
+    state.pendingAuraChange = null;
+    elements.auraConfirmation.classList.add('hidden');
+  });
+  elements.leaderboardSearch.addEventListener('input', renderLeaderboard);
+  elements.activityFilter.addEventListener('change', renderLogs);
+
+  for (const control of document.querySelectorAll('.control')) {
+    control.addEventListener('invalid', () => control.setAttribute('aria-invalid', 'true'));
+    control.addEventListener('input', () => {
+      if (control.checkValidity()) control.removeAttribute('aria-invalid');
+    });
+    control.addEventListener('change', () => {
+      if (control.checkValidity()) control.removeAttribute('aria-invalid');
+    });
+  }
+
+  window.addEventListener('DOMContentLoaded', async () => {
+    updateMonthContext();
+
+    if (!supabaseClient) {
+      setAuthBusy(true, 'Недостъпно');
+      showAuthMessage('Не успяхме да заредим услугата за вход. Проверете връзката си и обновете страницата.', 'error');
+      return;
+    }
+
+    setAuthBusy(true, 'Проверка…');
+    try {
+      const { data: { session }, error } = await supabaseClient.auth.getSession();
+      if (error) throw error;
+      if (session) {
+        state.currentUser = session.user;
         await loadUserProfile();
+      }
+    } catch {
+      showAuthMessage('Не успяхме да проверим сесията ви. Опитайте отново.', 'error');
+    } finally {
+      if (!elements.authSection.classList.contains('hidden')) {
+        setAuthBusy(false);
       }
     }
   });
-
-  // Зареждане на профил
-async function loadUserProfile() {
-  const { data: profile, error } = await supabaseClient
-    .from('profiles')
-    .select('*')
-    .eq('id', currentUser.id)
-    .maybeSingle();
-
-  if (error || !profile || !profile.is_approved) {
-    await supabaseClient.auth.signOut();
-    showMsg(document.getElementById('auth-message'), 'Акаунтът ви не е одобрен от админ!', 'bg-yellow-500/20 text-yellow-400');
-    return;
-  }
-
-  currentUserProfile = profile;
-  document.getElementById('auth-section').classList.add('hidden');
-  document.getElementById('dashboard-section').classList.remove('hidden');
-  document.getElementById('user-info').classList.remove('hidden');
-  document.getElementById('user-name').textContent = profile.username;
-
-  if (profile.is_admin) {
-    document.getElementById('admin-panel').classList.remove('hidden');
-  }
-
-  await loadDashboardData();
-  subscribeToRealtime(); // <-- добавено тук
-}
-
-let realtimeChannel = null;
-
-function subscribeToRealtime() {
-  if (realtimeChannel) return; // не дублирай канала при повторен login
-  realtimeChannel = supabaseClient
-    .channel('public-changes')
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' },
-      (payload) => { console.log('profiles change:', payload); loadDashboardData(); })
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'aura_logs' },
-      (payload) => { console.log('aura_logs change:', payload); loadDashboardData(); })
-    .subscribe((status) => console.log('subscribe status:', status));
-}
-
-  // Зареждане на данни (Класация и Хронология)
-  async function loadDashboardData() {
-    const { data: profiles, error: pErr } = await supabaseClient
-      .from('profiles')
-      .select('*')
-      .order('aura_points', { ascending: false });
-
-    if (pErr) console.error("Грешка при профили:", pErr);
-
-    const leaderboardBody = document.getElementById('leaderboard-body');
-    const targetSelect = document.getElementById('target-user');
-    const currentSelectedUser = targetSelect.value;
-
-    leaderboardBody.innerHTML = '';
-    targetSelect.innerHTML = '<option value="">Изберете колега...</option>';
-
-    profiles?.forEach((p, index) => {
-      const points = Number(p.aura_points) || 0;
-      const isPositive = points >= 0;
-
-      const row = `
-        <tr class="border-b border-slate-700/50 hover:bg-slate-700/30">
-          <td class="p-3 font-bold ${index === 0 ? 'text-amber-400' : 'text-slate-400'}">#${index + 1}</td>
-          <td class="p-3 font-medium">${p.username} ${p.is_admin ? '🛡️' : ''}</td>
-          <td class="p-3 text-right font-black ${isPositive ? 'text-green-400' : 'text-red-400'}">
-            ${points}
-          </td>
-        </tr>`;
-      leaderboardBody.innerHTML += row;
-
-      const option = document.createElement('option');
-      option.value = p.id;
-      option.textContent = p.username;
-      if (p.id === currentSelectedUser) option.selected = true;
-      targetSelect.appendChild(option);
-    });
-
-    const { data: logs, error: lErr } = await supabaseClient
-      .from('aura_logs')
-      .select('*, profiles!aura_logs_user_id_fkey(username)')
-      .order('created_at', { ascending: false })
-      .limit(10);
-
-    if (lErr) console.error("Грешка при логове:", lErr);
-
-    const logsContainer = document.getElementById('logs-container');
-    logsContainer.innerHTML = '';
-
-    logs?.forEach(log => {
-      const isPositive = log.points >= 0;
-      const item = `
-        <div class="p-3 bg-slate-900/60 rounded border border-slate-700/50 flex justify-between items-center">
-          <div>
-            <span class="font-bold text-indigo-300">${log.profiles?.username || 'Потребител'}</span>
-            <span class="text-slate-400"> - ${log.reason}</span>
-          </div>
-          <span class="font-bold ${isPositive ? 'text-green-400' : 'text-red-400'}">
-            ${isPositive ? '+' : ''}${log.points}
-          </span>
-        </div>`;
-      logsContainer.innerHTML += item;
-    });
-  }
-
-  // Админ форма
-  document.getElementById('aura-form')?.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const userId = document.getElementById('target-user').value;
-    const points = parseInt(document.getElementById('aura-points').value);
-    const reason = document.getElementById('aura-reason').value;
-
-    const { error } = await supabaseClient.from('aura_logs').insert({
-      user_id: userId,
-      admin_id: currentUser.id,
-      points: points,
-      reason: reason
-    });
-
-    if (!error) {
-      document.getElementById('aura-form').reset();
-      // Ръчно незабавно презареждане
-      await loadDashboardData();
-    } else {
-      alert('Грешка при добавяне: ' + error.message);
-    }
-  });
-
-  function showMsg(el, text, classes) {
-    el.className = `p-3 rounded mb-4 text-sm font-medium ${classes}`;
-    el.textContent = text;
-    el.classList.remove('hidden');
-  }
-
-  // --- REALTIME АБОНАМЕНТ ---
 
 </script>
 </body>
